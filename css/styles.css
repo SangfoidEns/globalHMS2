@@ -1,214 +1,135 @@
-/* ==========================================================================
-   СПОЛУЧЕННЯ КОЛЬОРІВ: Deep Titanium (#0B0E14) + Telegram Blue (#0088CC) + Desert Gold (#E5C158)
-   ========================================================================== */
-
+/* ==========================================
+   ПОТРІЙНА ПЕРЕВІРКА 1: Скидання стилів
+   ========================================== */
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    -webkit-tap-highlight-color: transparent;
 }
 
 :root {
-    /* Палітра iPhone Titanium */
-    --titan-black: #080a0f;
-    --titan-dark: #121621;
-    --titan-border: rgba(255, 255, 255, 0.12);
-    
-    /* Акценти */
-    --tg-blue: #0088cc;
-    --tg-blue-hover: #0099e6;
-    --desert-gold: #e5c158;
-    --gold-glow: rgba(229, 193, 88, 0.25);
-    
-    /* Текст */
-    --text-primary: #ffffff;
-    --text-secondary: rgba(235, 235, 245, 0.6);
-    --text-tertiary: rgba(235, 235, 245, 0.38);
-
-    /* Скло iOS */
-    --glass-bg: rgba(22, 28, 38, 0.65);
-    --glass-blur: blur(40px) saturate(190%);
+    --bg-dark: #0a0c10;
+    --wall-color: #12161f;
+    --accent-neon: #00ffcc;
+    --accent-blue: #0088ff;
+    --text-main: #e6edf3;
+    --text-dim: #8b949e;
+    --card-bg: rgba(22, 27, 34, 0.75);
+    --border-color: rgba(0, 255, 204, 0.2);
 }
 
+/* ==========================================
+   ПОТРІЙНА ПЕРЕВІРКА 2: Гарантія темного фону
+   ========================================== */
 html, body {
     width: 100%;
     height: 100%;
-    background-color: var(--titan-black) !important;
-    color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
-    letter-spacing: -0.015em;
+    background-color: var(--bg-dark) !important; /* Гарантує відсутність білого фону */
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
     overflow-x: hidden;
 }
 
-/* --- ШАР ФОНУ (WALLPAPER) --- */
-.wallpaper-bg {
+/* Технологічна сучасна стіна (Градієнт + Текстура) */
+.tech-wall-bg {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
+    background: 
+        radial-gradient(circle at 50% 20%, rgba(0, 136, 255, 0.15), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(0, 255, 204, 0.1), transparent 40%),
+        linear-gradient(135deg, #08090c 0%, #121620 50%, #050608 100%);
+    z-index: -2;
+}
+
+/* Кибер-сітка на тлі */
+.grid-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
     z-index: -1;
-    background: radial-gradient(circle at 50% 100%, #101622 0%, #06070a 100%);
 }
 
-.ambient-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.6;
-}
-
-.glow-titan {
-    top: -10%;
-    left: -10%;
-    width: 70vw;
-    height: 50vh;
-    background: radial-gradient(circle, rgba(0, 136, 204, 0.3) 0%, transparent 70%);
-}
-
-.glow-gold {
-    bottom: 10%;
-    right: -10%;
-    width: 60vw;
-    height: 50vh;
-    background: radial-gradient(circle, var(--gold-glow) 0%, transparent 70%);
-}
-
-/* --- КОНТЕЙНЕР --- */
-.app-viewport {
-    max-width: 440px; /* Пропорції екрана iPhone Pro Max */
+/* ==========================================
+   ПОТРІЙНА ПЕРЕВІРКА 3: Контент та Картки
+   ========================================== */
+.container {
+    max-width: 800px;
     margin: 0 auto;
-    padding: 60px 20px 40px 20px;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-/* --- iOS NAVBAR --- */
-.ios-navbar {
+    padding: 60px 20px;
     text-align: center;
-    margin-bottom: 28px;
 }
 
-.tg-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(0, 136, 204, 0.12);
-    border: 0.5px solid rgba(0, 136, 204, 0.3);
-    padding: 4px 10px;
-    border-radius: 20px;
-    margin-bottom: 12px;
-}
-
-.tg-indicator {
-    width: 6px;
-    height: 6px;
-    background-color: var(--tg-blue);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--tg-blue);
-}
-
-.tg-status-text {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #4dc2ff;
-    letter-spacing: 0.02em;
-}
-
-.ios-title {
-    font-size: 2.1rem;
-    font-weight: 700;
-    background: linear-gradient(180deg, #FFFFFF 0%, #B0C4DE 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.03em;
-}
-
-.ios-subtitle {
-    font-size: 0.95rem;
-    color: var(--text-secondary);
-    margin-top: 4px;
-    font-weight: 400;
-}
-
-/* --- iOS GLASS CARD --- */
-.ios-card {
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 0.5px solid var(--titan-border);
-    border-radius: 24px;
-    padding: 20px;
-    box-shadow: 
-        0 20px 40px rgba(0, 0, 0, 0.5),
-        inset 0 0.5px 0 rgba(255, 255, 255, 0.2);
-}
-
-.card-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.app-icon {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 0.5px solid var(--titan-border);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.card-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.card-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.card-time {
-    font-size: 0.75rem;
-    color: var(--text-tertiary);
-}
-
-.card-body p {
-    font-size: 0.95rem;
-    line-height: 1.45;
-    color: var(--text-secondary);
-    margin-bottom: 24px;
-}
-
-/* --- TELEGRAM MAIN BUTTON --- */
-.tg-main-button {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--tg-blue) 0%, #006699 100%);
+.glow-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: 2px;
     color: #ffffff;
-    font-family: inherit;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 
-        0 8px 20px rgba(0, 136, 204, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+    text-shadow: 0 0 15px rgba(0, 255, 204, 0.6);
+    margin-bottom: 8px;
 }
 
-.tg-main-button:active {
-    transform: scale(0.98);
-    opacity: 0.9;
+.subtitle {
+    color: var(--text-dim);
+    margin-bottom: 40px;
+}
+
+.card {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    text-align: left;
+}
+
+.card h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    color: var(--accent-neon);
+    margin-bottom: 15px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--accent-neon);
+    box-shadow: 0 0 10px var(--accent-neon);
+}
+
+.btn-tech {
+    margin-top: 20px;
+    padding: 12px 24px;
+    background: transparent;
+    color: var(--accent-neon);
+    border: 1px solid var(--accent-neon);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-tech:hover {
+    background: var(--accent-neon);
+    color: #000;
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
 }
