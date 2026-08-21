@@ -13,7 +13,7 @@ export class Utils {
     return matches ? matches.map(m => this.parseFloatSafe(m)) : [];
   }
 
-  // Парсинг rawMoney за вимогами Промпту 1
+  // Повна відповідність Промпту 1 для розбору боргу та грошей
   static parseMoneyAndDebt(rawMoney) {
     let debtNew = 0;
     let debtRepaid = 0;
@@ -25,22 +25,25 @@ export class Utils {
     const hasDebtWord = str.includes('долг') || str.includes('борг');
 
     if (hasDebtWord) {
-      // Шукаємо число біля слова "долг/борг"
-      const debtMatch = str.match(/(?:долг|борг)\s*(-?\d+(?:[.,]\d+)?)|(-?\d+(?:[.,]\d+)?)\s*(?:долг|борг)/);
+      // Шукаємо конструкції: "долг -50", "-50 долг", "долг 50", "долг +50"
+      const debtMatch = str.match(/(?:долг|борг)\s*([+-]?\d+(?:[.,]\d+)?)|([+-]?\d+(?:[.,]\d+)?)\s*(?:долг|борг)/);
+      
       if (debtMatch) {
         const debtValStr = debtMatch[1] || debtMatch[2];
         const debtVal = this.parseFloatSafe(debtValStr);
-        if (debtVal < 0) {
-          debtNew = Math.abs(debtVal);
+
+        if (debtVal < 0 || str.includes('-')) {
+          debtNew = Math.abs(debtVal); // Новий борг
         } else {
-          debtRepaid = debtVal;
+          debtRepaid = Math.abs(debtVal); // Погашення боргу
         }
       }
 
-      // Усі інші позитивні числа в цьому ж рядку = eurPaid
+      // Інші позитивні числа вважаються фактично сплаченими коштами (eurPaid)
       const numbers = this.parseAllNumbers(str);
       numbers.forEach(num => {
-        if (num > 0 && num !== debtNew && num !== debtRepaid) {
+        const absNum = Math.abs(num);
+        if (num > 0 && absNum !== debtNew && absNum !== debtRepaid) {
           eurPaid += num;
         }
       });
@@ -57,8 +60,8 @@ export class Utils {
     const now = new Date();
     if (!timeStr) return now;
 
-    const trimmed = String(timeStr).trim();
-    const timeMatch = trimmed.match(/(\d{1,2})[:\.](\d{2})/);
+    const trimmed = String(timeStr).replace('..', ':').trim();
+    const timeMatch = trimmed.match(/(\d{1,2}):(\d{2})/);
     
     let hours = now.getHours();
     let minutes = now.getMinutes();
