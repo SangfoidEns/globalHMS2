@@ -1,5 +1,6 @@
 import { parseTableData } from './parser.js';
 import { charts } from './charts.js';
+import { Store } from './store.js';
 
 class ApplicationController {
   constructor() {
@@ -8,7 +9,7 @@ class ApplicationController {
     this.btnParse = document.getElementById('btnParse');
     
     this.currentRecords = [];
-    this.manualExpenses = parseFloat(localStorage.getItem('hms_manual_expenses')) || 0;
+    this.manualExpenses = Store.getExpenses();
 
     this.init();
   }
@@ -23,7 +24,7 @@ class ApplicationController {
       this.btnParse.addEventListener('click', () => this.processData());
     }
 
-    const savedRaw = localStorage.getItem('hms_raw_data');
+    const savedRaw = Store.getRawData();
     if (savedRaw && this.rawInput) {
       this.rawInput.value = savedRaw;
       this.processData();
@@ -33,7 +34,7 @@ class ApplicationController {
   onExpensesChange(e) {
     const val = parseFloat(e.target.value);
     this.manualExpenses = isNaN(val) ? 0 : val;
-    localStorage.setItem('hms_manual_expenses', this.manualExpenses.toString());
+    Store.setExpenses(this.manualExpenses);
     this.updateKPIsOnly();
   }
 
@@ -41,7 +42,7 @@ class ApplicationController {
     const text = this.rawInput.value;
     if (!text.trim()) return;
 
-    localStorage.setItem('hms_raw_data', text);
+    Store.setRawData(text);
 
     this.currentRecords = parseTableData(text);
 
@@ -64,7 +65,7 @@ class ApplicationController {
       totalDebt += (r.debtNew || 0);
     });
 
-    // Чиста Каса = Фактична готівка з угод - Ручні витрати
+    // Чиста Каса на руках = Готівка за угоди - Витрати
     const netCashInHand = totalCashPaid - this.manualExpenses;
 
     document.getElementById('kpiGrossRevenue').innerText = `${grossRevenue.toFixed(2)} €`;
