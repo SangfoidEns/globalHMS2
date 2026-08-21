@@ -1,120 +1,148 @@
 export class ChartEngine {
   constructor() {
-    this.instances = {};
+    this.hourlyChartInstance = null;
+    this.categoryChartInstance = null;
   }
 
-  destroy(id) {
-    if (this.instances[id]) {
-      this.instances[id].destroy();
-      delete this.instances[id];
+  // Очистка графіків при оновленні даних
+  destroyCharts() {
+    if (this.hourlyChartInstance) {
+      this.hourlyChartInstance.destroy();
+      this.hourlyChartInstance = null;
+    }
+    if (this.categoryChartInstance) {
+      this.categoryChartInstance.destroy();
+      this.categoryChartInstance = null;
     }
   }
 
-  renderPieChart(canvasId, netProfit, costOfGoods, expenses, activeDebt) {
-    this.destroy(canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    this.instances[canvasId] = new Chart(ctx, {
-      type: 'doughnut',
+  // 1. РЕНДЕР ТЕПЛОВОЇ КАРТИ (HEATMAP GRID)
+  renderHeatmap(containerId, records) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Матриця 7 днів тижня x 24 години
+    const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+    let maxDeals = 0;
+
+    const daysMap = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+    // Заповнюємо матрицю з розпарсених дат угод
+    records.forEach(r => {
+      if (r.parsedDateObj && !isNaN(r.parsedDateObj.getTime())) {
+        const day = r.parsedDateObj.getDay(); 
+        const hour = r.parsedDateObj.getHours(); 
+        matrix[day][hour] += 1;
+
+        if (matrix[day][hour] > maxDeals) {
+          maxDeals = matrix[day][hour];
+        }
+      }
+    });
+
+    let html = `<div class="min-w-[680px] space-y-1">`;
+    
+    // Заголовок годин (00..23)
+    html += `<div class="grid grid-cols-[40px_repeat(24,1fr)] gap-1 text-[9px] font-mono text-slate-500 text-center pb-1"><div></div>`;
+    for (let h = 0; h < 24; h++) {
+      html += `<div>${String(h).padStart(2, '0')}</div>`;
+    }
+    html += `</div>`;
+
+    // Рядки днів тижня (Починаємо з Пн = 1 до Нд = 0)
+    [1, 2, 3, 4, 5, 6, 0].forEach(dayIdx => {
+      html += `<div class="grid grid-cols-[40px_repeat(24,1fr)] gap-1 items-center">`;
+      html += `<div class="text-[10px] font-bold text-slate-400 font-mono">${daysMap[dayIdx]}</div>`;
+
+      for (let h = 0; h < 24; h++) {
+        const count = matrix[dayIdx][h];
+        const intensity = maxDeals > 0 ? count / maxDeals : 0;
+        
+        let bgStyle = 'background: rgba(255, 255, 255, 0.03);';
+        if (count > 0) {
+          bgStyle = `background: rgba(255, 159, 10, ${Math.max(0.2, intensity)}); box-shadow: 0 0 8px rgba(255, 159, 10, ${intensity * 0.4});`;
+        }
+
+        html += `
+          <div title="${daysMap[dayIdx]} ${h}:00 — Угод: ${count}" 
+               style="${bgStyle}" 
+               class="h-6 rounded border border-white/5 flex items-center justify-center text-[9px] font-mono transition-transform hover:scale-110 cursor-pointer ${count > 0 ? 'text-slate-950 font-bold' : 'text-transparent'}">
+            ${count > 0 ? count : ''}
+          </div>
+        `;
+      }
+      html += `</div>`;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
+  }
+
+  // 2. ГРАФІК ПО ГОДИНАХ (Chart.js Line)
+  renderHourlyChart(canvasId, records) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    const hourlyCounts = Array(24).fill(0);
+    records.forEach(r => {
+      if (r.parsedDateObj && !isNaN(r.parsedDateObj.getTime())) {
+        hourlyCounts[r.parsedDateObj.getHours()]++;
+      }
+    });
+
+    this.hourlyChartInstance = new Chart(ctx, {
+      type: 'line',
       data: {
-        labels: ['Чистий Прибуток', 'Собівартість Товару', 'Операційні Витрати', 'Борги Покупців'],
+        labels: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`),
         datasets: [{
-          data: [Math.max(0, netProfit), costOfGoods, expenses, activeDebt],
-          backgroundColor: ['#BF5AF2', '#FF453A', '#FF9F0A', '#FFD60A'],
-          borderWidth: 2,
-          borderColor: '#090A0F'
+          label: 'Кількість Угод',
+          data: hourlyCounts,
+          borderColor: '#0A84FF',
+          backgroundColor: 'rgba(10, 132, 255, 0.15)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 6
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        cutout: '68%'
-      }
-    });
-  }
-
-  renderHourlyChart(canvasId, hourDistribution, hourWeightDistribution) {
-    this.destroy(canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const labels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2,'0')}:00`);
-    const ctx = canvas.getContext('2d');
-    
-    const gradient = ctx.createLinearGradient(0, 0, 0, 150);
-    gradient.addColorStop(0, 'rgba(100, 210, 255, 0.4)');
-    gradient.addColorStop(1, 'rgba(100, 210, 255, 0.0)');
-
-    this.instances[canvasId] = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Угоди',
-            data: hourDistribution,
-            backgroundColor: gradient,
-            borderColor: '#64D2FF',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            yAxisID: 'y'
-          },
-          {
-            label: 'Вага (г)',
-            data: hourWeightDistribution,
-            borderColor: '#FF9F0A',
-            borderWidth: 2,
-            borderDash: [3, 3],
-            fill: false,
-            tension: 0.2,
-            yAxisID: 'y1'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#8e8e93', font: { size: 10 } } } },
         scales: {
-          x: { ticks: { color: '#8e8e93', font: { size: 9 } }, grid: { display: false } },
-          y: { type: 'linear', position: 'left', ticks: { color: '#64D2FF', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-          y1: { type: 'linear', position: 'right', ticks: { color: '#FF9F0A', font: { size: 9 } }, grid: { display: false } }
+          x: { ticks: { color: '#8E8E93', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#8E8E93', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
         }
       }
     });
   }
 
-  renderTopClientsChart(canvasId, clientVolumes) {
-    this.destroy(canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const sorted = Object.keys(clientVolumes)
-      .map(k => ({ name: k, amount: clientVolumes[k] }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
+  // 3. ГРАФІК КАТЕГОРІЙ (Chart.js Doughnut)
+  renderCategoryChart(canvasId, records) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
 
-    const ctx = canvas.getContext('2d');
-    this.instances[canvasId] = new Chart(ctx, {
-      type: 'bar',
+    const categories = {};
+    records.forEach(r => {
+      const cat = r.category || 'Інше';
+      categories[cat] = (categories[cat] || 0) + (r.eurPaid || 1);
+    });
+
+    this.categoryChartInstance = new Chart(ctx, {
+      type: 'doughnut',
       data: {
-        labels: sorted.map(s => s.name),
+        labels: Object.keys(categories),
         datasets: [{
-          label: 'Обсяг (€)',
-          data: sorted.map(s => s.amount),
-          backgroundColor: '#30D158',
-          borderRadius: 8
+          data: Object.values(categories),
+          backgroundColor: ['#0A84FF', '#30D158', '#FF9F0A', '#BF5AF2', '#FF453A', '#64D2FF'],
+          borderWidth: 0
         }]
       },
       options: {
-        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: '#8e8e93', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-          y: { ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
+        plugins: {
+          legend: { position: 'right', labels: { color: '#FFFFFF', font: { size: 11 } } }
         }
       }
     });
