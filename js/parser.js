@@ -14,7 +14,7 @@ export function parseTableData(rawText) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // 1. Визначення категорії (Блок із заголовками name, gramm, €)
+    // 1. Визначення категорії (Заголовок: НАЗВА_КАТЕГОРІЇ, name, gramm, €)
     if (i + 1 < lines.length) {
       const nextLine = lines[i + 1].toLowerCase();
       if (nextLine.includes('name') || nextLine.includes('gramm') || nextLine.includes('€')) {
@@ -29,7 +29,7 @@ export function parseTableData(rawText) {
       }
     }
 
-    // 2. Визначення категорії "МОЇ"
+    // 2. Детекція категорії "МОЇ"
     if (line.toUpperCase() === 'МОЇ' || line.toUpperCase().startsWith('МОЇ')) {
       currentCategory = 'МОЇ';
       i++;
@@ -47,9 +47,9 @@ export function parseTableData(rawText) {
           description: line,
           amount: isExpense ? -Math.abs(val) : Math.abs(val)
         });
-        i++;
-        continue;
       }
+      i++;
+      continue; // Запобігає потраплянню категорії "МОЇ" у 4-рядковий парсер угод
     }
 
     // 3. Автономна дата-префікс
@@ -59,7 +59,7 @@ export function parseTableData(rawText) {
       continue;
     }
 
-    // 4. Зчитування угоди (Блок з 4-х рядків)
+    // 4. Зчитування 4-рядкового блоку угоди
     if (i + 3 < lines.length) {
       const clientName = lines[i];
       const rawGrammStr = lines[i + 1];
