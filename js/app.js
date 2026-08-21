@@ -8,7 +8,7 @@ class ApplicationController {
     this.rawInput = document.getElementById('rawInput');
     this.btnParse = document.getElementById('btnParse');
     this.pricingMap = Store.getPricing();
-    this.myTransactions = Store.getMyTransactions();
+    this.manualTransactions = Store.getManualTransactions();
 
     this.init();
   }
@@ -25,27 +25,14 @@ class ApplicationController {
     }
   }
 
-  addMyTransaction(description, amount, isIncome) {
-    const finalAmount = isIncome ? Math.abs(amount) : -Math.abs(amount);
-    this.myTransactions.push({ description, amount: finalAmount, date: new Date() });
-    Store.setMyTransactions(this.myTransactions);
-    this.processData();
-  }
-
-  addCustomCategory(categoryName, costPer100g = 500) {
-    this.pricingMap[categoryName.toUpperCase()] = costPer100g;
-    Store.setPricing(this.pricingMap);
-    this.processData();
-  }
-
   processData() {
     const text = this.rawInput.value;
     if (!text.trim()) return;
 
     Store.setRawData(text);
 
-    const parsedRecords = parseTableData(text);
-    const kpis = CalculationEngine.calculateKPIs(parsedRecords, this.pricingMap, this.myTransactions);
+    const parsedData = parseTableData(text);
+    const kpis = CalculationEngine.calculateKPIs(parsedData, this.pricingMap, this.manualTransactions);
 
     this.renderKPIs(kpis);
 
