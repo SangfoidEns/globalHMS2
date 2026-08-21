@@ -1,22 +1,25 @@
 export class CalculationEngine {
-  static calculateDeal(record, pricingMap) {
-    const baseGramm = record.baseGramm || 0;
-    const exactGramm = baseGramm * 1.1; // Нестандартний коефіцієнт 1.1
+  static calculateDeal(deal, pricingMap) {
+    const baseGramm = deal.baseGramm || 0;
+    
+    // Нестандартний коефіцієнт переваги/втрат 10%
+    const exactGramm = baseGramm * 1.1;
 
-    const costPer100g = pricingMap[record.category] || pricingMap['DEFAULT'] || 500;
+    // Базова вартість закупівлі за 100г
+    const costPer100g = pricingMap[deal.category] || pricingMap['DEFAULT'] || 500;
     let costPer1g = costPer100g / 100;
 
-    // Бонус за об'єм (Base_Gramm >= 50g -> -5% на собівартість)
+    // Volume Bonus (Промпт 3): Base_Gramm >= 50g -> знижка 5% на собівартість
     if (baseGramm >= 50) {
       costPer1g *= 0.95;
     }
 
     const dealCost = exactGramm * costPer1g;
-    const estimatedRevenue = baseGramm * 10; // Фіксована ціна 10€/г
+    const estimatedRevenue = baseGramm * 10; // 10€ за 1г базової ваги
     const dealProfit = estimatedRevenue - dealCost;
 
     return {
-      ...record,
+      ...deal,
       exactGramm,
       dealCost,
       estimatedRevenue,
@@ -24,8 +27,10 @@ export class CalculationEngine {
     };
   }
 
-  static calculateKPIs(records, pricingMap, myTransactions = []) {
-    const calculatedDeals = records.map(r => this.calculateDeal(r, pricingMap));
+  static calculateKPIs(parsedData, pricingMap, manualTransactions = []) {
+    const { deals, myTransactions } = parsedData;
+
+    const calculatedDeals = deals.map(d => this.calculateDeal(d, pricingMap));
 
     let sumEurPaid = 0;
     let sumEstimatedRevenue = 0;
@@ -37,27 +42,30 @@ export class CalculationEngine {
       sumDealProfit += d.dealProfit;
     });
 
-    let myExpenses = 0; // "- Розхід"
-    let myIncomes = 0;  // "+ Дохід"
+    // Об'єднуємо транзакції з журналу та вручну введені
+    const allMyTransactions = [...myTransactions, ...manualTransactions];
 
-    myTransactions.forEach(t => {
-      if (t.amount < 0) myExpenses += Math.abs(t.amount);
-      if (t.amount > 0) myIncomes += t.amount;
+    let totalMyExpenses = 0; // "- Розхід"
+    let totalMyIncomes = 0;  // "+ Дохід"
+
+    allMyTransactions.forEach(t => {
+      if (t.amount < 0) totalMyExpenses += Math.abs(t.amount);
+      if (t.amount > 0) totalMyIncomes += t.amount;
     });
 
-    // Підсумкові KPI
-    const kpiRevenue = sumEurPaid - myExpenses;
+    // Формули KPI (Промпт 2)
+    const kpiRevenue = sumEurPaid - totalMyExpenses;
     const kpiExpectedRevenue = sumEstimatedRevenue;
-    const kpiNetProfit = sumDealProfit + myIncomes - myExpenses;
+    const kpiNetProfit = sumDealProfit + totalMyIncomes - totalMyExpenses;
 
-    // Розрахунок активних боргів по клієнтах
-    const clientDebts = {};
+    // Активний борг розраховується індивідуально по клієнтах
+    const clientBalances = {};
     calculatedDeals.forEach(d => {
-      if (!clientDebts[d.clientName]) clientDebts[d.clientName] = 0;
-      clientDebts[d.clientName] += (d.debtNew - d.debtRepaid);
+      if (!clientBalances[d.clientName]) clientBalances[d.clientName] = 0;
+      clientBalances[d.clientName] += (d.debtNew - d.debtRepaid);
     });
 
-    const kpiActiveDebt = Object.values(clientDebts).reduce((acc, debt) => {
+    const kpiActiveDebt = Object.values(clientBalances).reduce((acc, debt) => {
       return debt > 0 ? acc + debt : acc;
     }, 0);
 
