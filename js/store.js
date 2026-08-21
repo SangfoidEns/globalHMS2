@@ -3,7 +3,11 @@ export class Store {
     this.currentUser = 'default';
     this.currentVariety = 'UNKNOWN';
     this.varietyExpenses = {};
-    this.varietyCosts = { 'BANNAN': 600, 'SKITTLES': 660 };
+    // Кожен сорт має суму закупки (€) та закуплену вагу (г)
+    this.varieties = {
+      'BANNAN': { cost: 600, grams: 100 },
+      'SKITTLES': { cost: 660, grams: 100 }
+    };
     this.rawText = '';
   }
 
@@ -19,7 +23,10 @@ export class Store {
         const data = JSON.parse(raw);
         this.currentVariety = data.currentVariety || 'UNKNOWN';
         this.varietyExpenses = data.varietyExpenses || {};
-        this.varietyCosts = data.varietyCosts || { 'BANNAN': 600, 'SKITTLES': 660 };
+        this.varieties = data.varieties || {
+          'BANNAN': { cost: 600, grams: 100 },
+          'SKITTLES': { cost: 660, grams: 100 }
+        };
       }
       this.rawText = localStorage.getItem(`h2_raw_${this.currentUser}`) || '';
     } catch (e) {
@@ -31,10 +38,17 @@ export class Store {
     const data = {
       currentVariety: this.currentVariety,
       varietyExpenses: this.varietyExpenses,
-      varietyCosts: this.varietyCosts
+      varieties: this.varieties
     };
     localStorage.setItem(`h2_data_${this.currentUser}`, JSON.stringify(data));
     localStorage.setItem(`h2_raw_${this.currentUser}`, this.rawText);
+  }
+
+  // Розрахунок себевартості 1 грама для конкретного сорту
+  getPricePerGram(varietyName) {
+    const v = this.varieties[varietyName];
+    if (!v || !v.grams || v.grams <= 0) return 6; // Значення за замовчуванням (6€/г)
+    return v.cost / v.grams;
   }
 }
 
