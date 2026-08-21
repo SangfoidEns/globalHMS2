@@ -17,7 +17,6 @@ export class ChartEngine {
     }
   }
 
-  // 1. Heatmap Matrix (7 днів x 24 години)
   renderHeatmap(containerId, records) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -72,7 +71,6 @@ export class ChartEngine {
     container.innerHTML = html;
   }
 
-  // 2. Hourly Line Chart
   renderHourlyChart(canvasId, records) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
@@ -110,7 +108,6 @@ export class ChartEngine {
     });
   }
 
-  // 3. Category Doughnut Chart
   renderCategoryChart(canvasId, records) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
