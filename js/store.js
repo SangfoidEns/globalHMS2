@@ -9,11 +9,27 @@ export class Store {
     localStorage.setItem(CONFIG.STORAGE_KEYS.RAW_DATA, text);
   }
 
-  static getExpenses() {
-    return parseFloat(localStorage.getItem(CONFIG.STORAGE_KEYS.MANUAL_EXPENSES)) || 0;
+  static getPricing() {
+    const saved = localStorage.getItem(CONFIG.STORAGE_KEYS.PRICING);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return { ...CONFIG.DEFAULT_PRICING };
   }
 
-  static setExpenses(val) {
-    localStorage.setItem(CONFIG.STORAGE_KEYS.MANUAL_EXPENSES, val.toString());
+  static setPricing(pricingMap) {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.PRICING, JSON.stringify(pricingMap));
+  }
+
+  static getManualTransactions() {
+    const saved = localStorage.getItem(CONFIG.STORAGE_KEYS.MANUAL_TRANSACTIONS);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return [];
+  }
+
+  static setManualTransactions(transactions) {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.MANUAL_TRANSACTIONS, JSON.stringify(transactions));
   }
 }
