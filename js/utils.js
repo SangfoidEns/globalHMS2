@@ -1,5 +1,4 @@
 export class Utils {
-  // Безпечний переклад у число
   static parseFloatSafe(val, fallback = 0) {
     if (typeof val === 'number') return isNaN(val) ? fallback : val;
     if (!val) return fallback;
@@ -8,45 +7,77 @@ export class Utils {
     return isNaN(parsed) ? fallback : parsed;
   }
 
-  // Витягуємо сплачені гроші та борги з тексту суми
-  static parseMoneyAndDebt(moneyStr) {
-    if (!moneyStr) return { eurPaid: 0, debtNew: 0 };
-    
-    const str = String(moneyStr).toLowerCase().trim();
-    let eurPaid = 0;
-    let debtNew = 0;
-
-    // Шукаємо маркери боргу (-20долг, -50 борг тощо)
-    const debtMatch = str.match(/-?\s*(\d+(?:[.,]\d+)?)\s*(?:долг|борг|debt)/);
-    if (debtMatch) {
-      debtNew = this.parseFloatSafe(debtMatch[1]);
-    }
-
-    // Перше число ряду вважаємо за чисту оплату
-    const mainMatch = str.match(/^(\d+(?:[.,]\d+)?)/);
-    if (mainMatch) {
-      eurPaid = this.parseFloatSafe(mainMatch[1]);
-    }
-
-    return { eurPaid, debtNew };
+  static parseAllNumbers(str) {
+    if (!str) return [];
+    const matches = String(str).match(/-?\d+(?:[.,]\d+)?/g);
+    return matches ? matches.map(m => this.parseFloatSafe(m)) : [];
   }
 
-  // Парсер дат для теплової карти та часового графіка
-  static parseDate(dateStr) {
-    if (!dateStr) return new Date();
-    
-    const now = new Date();
-    const str = String(dateStr).trim();
+  // Парсинг rawMoney за вимогами Промпту 1
+  static parseMoneyAndDebt(rawMoney) {
+    let debtNew = 0;
+    let debtRepaid = 0;
+    let eurPaid = 0;
 
-    // Формат 14:30 / 14:30:00
-    const timeMatch = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-    if (timeMatch) {
-      const d = new Date(now);
-      d.setHours(parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0, 0);
-      return d;
+    if (!rawMoney) return { debtNew, debtRepaid, eurPaid };
+
+    const str = String(rawMoney).toLowerCase().trim();
+    const hasDebtWord = str.includes('долг') || str.includes('борг');
+
+    if (hasDebtWord) {
+      // Шукаємо число біля слова "долг/борг"
+      const debtMatch = str.match(/(?:долг|борг)\s*(-?\d+(?:[.,]\d+)?)|(-?\d+(?:[.,]\d+)?)\s*(?:долг|борг)/);
+      if (debtMatch) {
+        const debtValStr = debtMatch[1] || debtMatch[2];
+        const debtVal = this.parseFloatSafe(debtValStr);
+        if (debtVal < 0) {
+          debtNew = Math.abs(debtVal);
+        } else {
+          debtRepaid = debtVal;
+        }
+      }
+
+      // Усі інші позитивні числа в цьому ж рядку = eurPaid
+      const numbers = this.parseAllNumbers(str);
+      numbers.forEach(num => {
+        if (num > 0 && num !== debtNew && num !== debtRepaid) {
+          eurPaid += num;
+        }
+      });
+    } else {
+      // Якщо слова "долг" немає, усі числа підсумовуються як eurPaid
+      const numbers = this.parseAllNumbers(str);
+      eurPaid = numbers.reduce((acc, num) => acc + (num > 0 ? num : 0), 0);
     }
 
-    const parsed = new Date(str);
-    return isNaN(parsed.getTime()) ? now : parsed;
+    return { debtNew, debtRepaid, eurPaid };
+  }
+
+  static parseDateWithPrefix(timeStr, datePrefix) {
+    const now = new Date();
+    if (!timeStr) return now;
+
+    const trimmed = String(timeStr).trim();
+    const timeMatch = trimmed.match(/(\d{1,2})[:\.](\d{2})/);
+    
+    let hours = now.getHours();
+    let minutes = now.getMinutes();
+
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1], 10);
+      minutes = parseInt(timeMatch[2], 10);
+    }
+
+    if (datePrefix) {
+      const parts = datePrefix.split('.');
+      const day = parseInt(parts[0], 10) || now.getDate();
+      const month = (parseInt(parts[1], 10) || (now.getMonth() + 1)) - 1;
+      const year = parts[2] ? parseInt(parts[2], 10) : now.getFullYear();
+      return new Date(year, month, day, hours, minutes);
+    }
+
+    const d = new Date(now);
+    d.setHours(hours, minutes, 0, 0);
+    return d;
   }
 }
