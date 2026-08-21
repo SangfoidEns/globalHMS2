@@ -1,78 +1,41 @@
 import { Utils } from './utils.js';
 
-export class ParserEngine {
-  static parseLogs(rawText) {
-    if (!rawText) return { detectedVariety: 'UNKNOWN', records: [] };
-    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l !== '');
-    let currentCategory = 'UNKNOWN';
-    let currentDatePrefix = '';
-    const records = [];
-    const detectedCategories = new Set();
-    const techHeaders = ['name', 'gramm', '€', 'time'];
+export function parseTableData(rawText) {
+  if (!rawText || !rawText.trim()) return [];
 
-    let i = 0;
-    while (i < lines.length) {
-      const line = lines[i];
+  const lines = rawText.split('\n');
+  const records = [];
 
-      if (i + 3 < lines.length && 
-          lines[i+1].toLowerCase() === 'name' && 
-          lines[i+2].toLowerCase() === 'gramm' && 
-          lines[i+3] === '€') {
-        currentCategory = line.toUpperCase();
-        detectedCategories.add(currentCategory);
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
 
-        if (i + 4 < lines.length && (lines[i+4].includes('.') || lines[i+4].includes('/'))) {
-          currentDatePrefix = lines[i+4];
-          i += 5;
-        } else {
-          i += 4;
-        }
-        continue;
-      }
+    // Підтримка роздільників Tab або двопробілів/кома
+    const cols = trimmed.includes('\t') ? trimmed.split('\t') : trimmed.split(/\s{2,}/);
 
-      if (techHeaders.includes(line.toLowerCase())) {
-        i++;
-        continue;
-      }
+    if (cols.length < 2) return;
 
-      if (i + 3 < lines.length) {
-        const clientName = lines[i];
-        const rawGramm = lines[i+1];
-        const rawMoney = lines[i+2];
-        const timeStr = lines[i+3];
+    // Типова структура таблиці: [Час/Дата, Категорія/Товар, Сума/Гроші, ...]
+    const rawTime = cols[0] ? cols[0].trim() : '';
+    const category = cols[1] ? cols[1].trim() : 'Загальне';
+    const rawMoney = cols[2] ? cols[2].trim() : cols[1];
 
-        if (timeStr.includes('.') || timeStr.includes(':')) {
-          const grammBonusMatch = rawGramm.match(/!(\d*\.?\d+)/);
-          const moneyData = Utils.parseMoneyAndDebt(rawMoney);
-          
-          if (grammBonusMatch && moneyData.bonusGrams === 0) {
-            moneyData.bonusGrams = parseFloat(grammBonusMatch[1]);
-          }
+    const moneyInfo = Utils.parseMoneyAndDebt(rawMoney);
+    const parsedDateObj = Utils.parseDate(rawTime);
 
-          const baseGramm = Utils.parseWeight(rawGramm);
-          const fullTimeStr = (currentDatePrefix && !timeStr.includes('.')) ? `${currentDatePrefix} ${timeStr}` : timeStr;
+    // Валовий виторг = оплата + борг
+    const totalPrice = moneyInfo.eurPaid + moneyInfo.debtNew;
 
-          records.push({
-            id: `${currentCategory}_${clientName}_${fullTimeStr}`.replace(/\s+/g, ''),
-            category: currentCategory,
-            clientName,
-            rawGramm,
-            baseGramm,
-            rawMoney,
-            ...moneyData,
-            timeStr: fullTimeStr
-          });
+    records.push({
+      id: index + 1,
+      rawTime,
+      category,
+      eurPaid: moneyInfo.eurPaid, // Готівка за угодою
+      debtNew: moneyInfo.debtNew, // Новий борг
+      totalPrice,                 // Валовий виторг
+      parsedDateObj
+    });
+  });
 
-          i += 4;
-          continue;
-        }
-      }
-      i++;
-    }
-
-    const categoriesArray = Array.from(detectedCategories);
-    const combinedVariety = categoriesArray.length > 0 ? categoriesArray.join(' & ') : 'UNKNOWN';
-
-    return { detectedVariety: combinedVariety, records };
-  }
+  return records;
 }
