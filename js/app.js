@@ -51,8 +51,11 @@ class ApplicationController {
     document.getElementById('btnPage0').addEventListener('click', () => this.goToPage(0));
     document.getElementById('btnPage1').addEventListener('click', () => this.goToPage(1));
 
-    document.getElementById('btnPresetBannan').addEventListener('click', () => this.setPreset('BANNAN', 600));
-    document.getElementById('btnPresetSkittles').addEventListener('click', () => this.setPreset('SKITTLES', 660));
+    // Подія додавання/оновлення закупки сорту
+    document.getElementById('purchaseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.addOrUpdatePurchase();
+    });
 
     document.getElementById('btnSwitchUser').addEventListener('click', () => {
       const newUser = prompt('Введіть ім\'я оператора:', store.currentUser);
@@ -84,9 +87,27 @@ class ApplicationController {
     });
   }
 
-  setPreset(name, cost) {
+  addOrUpdatePurchase() {
+    const variety = document.getElementById('purchVarietyInput').value.trim().toUpperCase();
+    const cost = parseFloat(document.getElementById('purchCostInput').value);
+    const grams = parseFloat(document.getElementById('purchGramsInput').value);
+
+    if (!variety || isNaN(cost) || isNaN(grams) || grams <= 0) return;
+
+    store.varieties[variety] = { cost, grams };
+    store.currentVariety = variety;
+
+    document.getElementById('purchVarietyInput').value = '';
+    document.getElementById('purchCostInput').value = '';
+    document.getElementById('purchGramsInput').value = '';
+
+    Utils.triggerHaptic('success');
+    this.processData();
+  }
+
+  setPresetVariety(name) {
     store.currentVariety = name;
-    store.varietyCosts[name] = cost;
+    Utils.triggerHaptic('light');
     this.processData();
   }
 
@@ -118,8 +139,8 @@ class ApplicationController {
 
     this.currentRecords.forEach(r => {
       r.exactGramm = r.baseGramm * 1.1;
-      const catCost = store.varietyCosts[r.category] || 600;
-      r.pricePerGram = catCost / 100;
+      // Дістаємо точну собівартість 1г для сорту угоди
+      r.pricePerGram = store.getPricePerGram(r.category);
       r.dealCost = r.exactGramm * r.pricePerGram;
       r.dealRevenue = r.baseGramm * 10;
       r.dealProfit = r.dealRevenue - r.dealCost;
@@ -155,15 +176,52 @@ class ApplicationController {
     document.getElementById('kpiActiveDebt').innerText = `${totalActiveDebt.toFixed(2)} €`;
     document.getElementById('totalExpensesSumLabel').innerText = `${totalExpenses.toFixed(2)} €`;
 
+    // Dynamic UI Updates
+    this.renderVarietyPresets();
+    this.renderExpensesList(currentVarExpenses);
+    this.renderTable(this.currentRecords);
+
     // Render Charts
     charts.renderPieChart('financePieChartCanvas', netProfitFinal, totalCostOfGoods, totalExpenses, totalActiveDebt);
     charts.renderHourlyChart('page1ChartCanvas', hourDistribution, hourWeightDistribution);
     charts.renderTopClientsChart('topClientsChartCanvas', clientVolumes);
-    
-    this.renderExpensesList(currentVarExpenses);
-    this.renderTable(this.currentRecords);
 
     store.save();
+  }
+
+  renderVarietyPresets() {
+    const container = document.getElementById('varietyPresetsContainer');
+    const keys = Object.keys(store.varieties);
+    
+    if (!keys.length) {
+      container.innerHTML = '<span class="text-[10px] text-slate-500">Сорти відсутні</span>';
+      return;
+    }
+
+    container.innerHTML = keys.map(v => {
+      const isSelected = store.currentVariety === v;
+      const data = store.varieties[v];
+      const ppg = (data.cost / data.grams).toFixed(2);
+
+      return `
+        <button type="button" data-vname="${v}" class="variety-btn px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex flex-col items-start ${
+          isSelected 
+            ? 'bg-iosPeach text-slate-950 border-iosPeach shadow-md' 
+            : 'bg-white/5 text-slate-300 border-white/10 hover:border-iosPeach/50'
+        }">
+          <span>${Utils.escapeHtml(v)}</span>
+          <span class="text-[8px] opacity-80 font-mono">${data.cost}€ / ${data.grams}г (${ppg}€/г)</span>
+        </button>
+      `;
+    }).join('');
+
+    // Прив'язка кліків до згенерованих кнопок сортів
+    container.querySelectorAll('.variety-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const vname = e.currentTarget.dataset.vname;
+        this.setPresetVariety(vname);
+      });
+    });
   }
 
   addExpense() {
