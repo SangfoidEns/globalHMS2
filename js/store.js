@@ -1,55 +1,250 @@
-export class Store {
-  constructor() {
-    this.currentUser = 'default';
-    this.currentVariety = 'UNKNOWN';
-    this.varietyExpenses = {};
-    // Кожен сорт має суму закупки (€) та закуплену вагу (г)
-    this.varieties = {
-      'BANNAN': { cost: 600, grams: 100 },
-      'SKITTLES': { cost: 660, grams: 100 }
-    };
-    this.rawText = '';
-  }
+<!DOCTYPE html>
+<html lang="uk" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Humans 2.0 - Ultimate Analytics Engine</title>
 
-  initUser(user) {
-    this.currentUser = user;
-    this.load();
-  }
+  <!-- External CDNs -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  load() {
-    try {
-      const raw = localStorage.getItem(`h2_data_${this.currentUser}`);
-      if (raw) {
-        const data = JSON.parse(raw);
-        this.currentVariety = data.currentVariety || 'UNKNOWN';
-        this.varietyExpenses = data.varietyExpenses || {};
-        this.varieties = data.varieties || {
-          'BANNAN': { cost: 600, grams: 100 },
-          'SKITTLES': { cost: 660, grams: 100 }
-        };
-      }
-      this.rawText = localStorage.getItem(`h2_raw_${this.currentUser}`) || '';
-    } catch (e) {
-      console.error("Store Load Error:", e);
-    }
-  }
+  <!-- Local Assets -->
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/config.js"></script>
+</head>
+<body class="space-y-4">
 
-  save() {
-    const data = {
-      currentVariety: this.currentVariety,
-      varietyExpenses: this.varietyExpenses,
-      varieties: this.varieties
-    };
-    localStorage.setItem(`h2_data_${this.currentUser}`, JSON.stringify(data));
-    localStorage.setItem(`h2_raw_${this.currentUser}`, this.rawText);
-  }
+  <div class="ios-aurora"></div>
 
-  // Розрахунок себевартості 1 грама для конкретного сорту
-  getPricePerGram(varietyName) {
-    const v = this.varieties[varietyName];
-    if (!v || !v.grams || v.grams <= 0) return 6; // Значення за замовчуванням (6€/г)
-    return v.cost / v.grams;
-  }
-}
+  <!-- HEADER (Чистий та компактний) -->
+  <div class="p-3 md:p-6 pb-0 max-w-7xl mx-auto">
+    <header class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 glass-card p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-iosPeach/40 flex items-center justify-center font-black text-iosPeach text-2xl shadow-[0_0_25px_rgba(255,159,10,0.25)]">
+          H2
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-black tracking-wider text-white uppercase">HUMANS <span class="px-2 py-0.5 rounded-lg bg-iosPeach/15 text-iosPeach border border-iosPeach/30 text-xs font-mono">ULTIMATE ANALYTICS</span></h1>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">Операційний аналіз, фінансові потоки та глибока статистика</p>
+        </div>
+      </div>
 
-export const store = new Store();
+      <div class="flex flex-wrap items-center gap-3 justify-between lg:justify-end">
+        <div class="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
+          <button id="btnPage0" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-iosPeach text-slate-950 shadow-lg">1. Сесія</button>
+          <button id="btnPage1" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-transparent text-slate-400 hover:text-white">2. Глобальний Архів</button>
+        </div>
+
+        <div id="tgUserBadge" class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-iosPeach/30 text-xs">
+          <span class="w-2 h-2 rounded-full bg-iosEmerald animate-ping"></span>
+          <span id="tgUserName" class="font-bold text-iosPeach">User Auth</span>
+          <button id="btnSwitchUser" class="text-[10px] bg-iosPeach/20 text-iosPeach px-2 py-0.5 rounded-md hover:bg-iosPeach/30 transition border border-iosPeach/30 font-bold glass-card-interactive">Змінити</button>
+        </div>
+
+        <div class="text-right hidden xl:block bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
+          <p id="liveClock" class="text-xs font-mono font-bold text-iosPeach">--:--:--</p>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <!-- SWIPE CONTAINER -->
+  <div id="swipeContainer" class="swipe-container max-w-7xl mx-auto">
+    <!-- PAGE 1: CURRENT SESSION -->
+    <div class="swipe-page space-y-6">
+      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>💰</span> Валовий Виторг</p>
+          <p class="text-lg font-black text-white font-mono" id="kpiGrossRevenue">0.00 €</p>
+          <p class="text-[9px] text-slate-500">Нараховано за тарифом</p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>💵</span> Каса На Руках</p>
+          <p class="text-lg font-black text-iosEmerald font-mono" id="kpiRevenue">0.00 €</p>
+          <p class="text-[9px] text-iosEmerald/70">Фактично отримано</p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>💎</span> Чистий Прибуток</p>
+          <p class="text-lg font-black text-iosViolet font-mono" id="kpiNetProfitFinal">0.00 €</p>
+          <p class="text-[9px] text-iosViolet/70">Виторг - закупка - витрати</p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>📦</span> Точна Вага (*1.1)</p>
+          <p class="text-lg font-black text-iosPeach font-mono" id="kpiExactWeight">0.0 г</p>
+          <p class="text-[9px] text-slate-500">Базова: <span id="kpiBaseWeight">0г</span></p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>📉</span> Собівартість</p>
+          <p class="text-lg font-black text-iosRose font-mono" id="kpiCostOfGoods">0.00 €</p>
+          <p class="text-[9px] text-iosRose/70">Закупка товару</p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>🔴</span> Активні Борги</p>
+          <p class="text-lg font-black text-iosAmber font-mono" id="kpiActiveDebt">0.00 €</p>
+          <p class="text-[9px] text-iosAmber/70">Неповернені кошти</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4 space-y-6">
+          
+          <!-- ТЕРМІНАЛ + МЕНЮ ЗАКУПКИ ТА СОРТІВ -->
+          <div class="glass-card p-4 space-y-4">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
+              <h2 class="text-xs font-bold tracking-wider uppercase text-iosPeach flex items-center gap-2"><span>📝</span> Термінал журналу</h2>
+              <span class="text-[10px] text-slate-400 font-mono">Парсер 2.0</span>
+            </div>
+
+            <!-- Перенесене меню закупок та сортів -->
+            <div class="bg-black/30 p-3 rounded-xl border border-white/5 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-300 uppercase flex items-center gap-1.5"><span>🌿</span> Активний сорт:</span>
+                <span id="activeVarietyBadge" class="px-2 py-0.5 rounded-md bg-iosPeach/20 text-iosPeach border border-iosPeach/30 text-xs font-black uppercase">--</span>
+              </div>
+
+              <!-- Швидкий вибір preset сортів -->
+              <div id="varietyPresetsContainer" class="flex flex-wrap gap-1.5 pt-1"></div>
+
+              <!-- Форма додавання / редагування закупки сорту -->
+              <form id="purchaseForm" class="space-y-2 border-t border-white/10 pt-2.5">
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Додати / Оновити закупку:</p>
+                <div class="grid grid-cols-3 gap-1.5">
+                  <input type="text" id="purchVarietyInput" placeholder="Сорт" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-bold uppercase" required />
+                  <input type="number" step="0.1" id="purchCostInput" placeholder="Сума €" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-mono" required />
+                  <input type="number" step="0.1" id="purchGramsInput" placeholder="Вага г" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-mono" required />
+                </div>
+                <button type="submit" class="w-full py-1.5 bg-iosPeach/20 hover:bg-iosPeach/30 text-iosPeach border border-iosPeach/40 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 glass-card-interactive">
+                  <span>+</span> Зберегти Закупку
+                </button>
+              </form>
+            </div>
+
+            <textarea id="rawInput" class="w-full h-40 p-3 glass-input rounded-xl text-xs font-mono resize-none leading-relaxed" placeholder="Вставити журнал угод сюди..."></textarea>
+            
+            <div class="flex gap-2">
+              <button id="btnProcess" class="flex-1 py-2.5 bg-gradient-to-r from-iosPeach to-orange-500 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:opacity-90 transition glass-card-interactive">ОБРОБИТИ ЖУРНАЛ</button>
+              <button id="btnClear" class="px-4 py-2.5 bg-white/5 border border-iosRose/40 text-iosRose font-bold text-xs rounded-xl hover:bg-iosRose/10 transition glass-card-interactive">ОЧИСТИТИ</button>
+            </div>
+          </div>
+
+          <!-- ОПЕРАЦІЙНІ ВИУРАТИ -->
+          <div class="glass-card p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
+              <div>
+                <h2 class="text-xs font-bold uppercase text-iosRose flex items-center gap-2"><span>📉</span> Операційні Витрати</h2>
+                <p class="text-[9px] text-slate-400">Сесія: <span id="expenseTableTitle" class="text-iosPeach">--</span></p>
+              </div>
+              <span id="totalExpensesSumLabel" class="text-xs font-mono font-bold text-iosRose">0.00 €</span>
+            </div>
+
+            <div class="space-y-1">
+              <p class="text-[10px] text-slate-400 font-bold uppercase">Швидкий вибір:</p>
+              <div class="flex flex-wrap gap-1" id="expensePresetsContainer">
+                <button data-cat="Логістика" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">📦 Логістика</button>
+                <button data-cat="Таксі" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">🚖 Таксі</button>
+                <button data-cat="Комунальні" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">⚡ Комунальні</button>
+                <button data-cat="Пакування" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">🏷️ Пакування</button>
+              </div>
+            </div>
+
+            <form id="expenseForm" class="flex flex-col gap-2 pt-1">
+              <div class="flex gap-2">
+                <input type="text" id="newExpenseCategoryInput" placeholder="Назва витрати..." class="flex-1 glass-input rounded-xl px-3 py-1.5 text-xs" required />
+                <input type="number" step="0.01" id="newExpenseAmountInput" placeholder="Сума €" class="w-24 glass-input rounded-xl px-3 py-1.5 text-xs font-mono" required />
+              </div>
+              <button type="submit" class="w-full py-2 bg-iosRose/20 hover:bg-iosRose/30 text-iosRose border border-iosRose/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 glass-card-interactive">
+                <span>+</span> Додати Витрату
+              </button>
+            </form>
+
+            <div id="expenseCategoriesContainer" class="space-y-2 max-h-36 overflow-y-auto pr-1 border-t border-white/10 pt-2"></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-8 space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div class="md:col-span-5 glass-card p-4 space-y-3 flex flex-col justify-between">
+              <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                <h3 class="text-xs font-bold text-iosPeach uppercase flex items-center gap-1.5"><span>🎯</span> Структура Виторгу</h3>
+                <span class="text-[9px] text-slate-400 font-mono">Розподіл €</span>
+              </div>
+              <div class="h-48 relative flex items-center justify-center"><canvas id="financePieChartCanvas"></canvas></div>
+            </div>
+            <div class="md:col-span-7 glass-card p-4 space-y-3 flex flex-col justify-between">
+              <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                <h3 class="text-xs font-bold text-iosCyan uppercase flex items-center gap-1.5"><span>📈</span> Динаміка За Годинами</h3>
+              </div>
+              <div class="h-48 relative"><canvas id="page1ChartCanvas"></canvas></div>
+            </div>
+          </div>
+
+          <div class="glass-card p-4 space-y-3">
+            <h3 class="text-xs font-bold text-iosEmerald uppercase flex items-center gap-2"><span>👑</span> Топ Покупці за Сумою (€)</h3>
+            <div class="h-44 relative"><canvas id="topClientsChartCanvas"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card p-4 space-y-4">
+        <div class="flex justify-between items-center flex-wrap gap-2">
+          <h2 class="text-xs font-bold tracking-wider uppercase text-slate-300 flex items-center gap-2">
+            <span>📋</span> Детальний Журнал Сесії (<span id="tableVarietyLabel" class="text-iosPeach">--</span>)
+          </h2>
+          <input type="text" id="tableSearch" placeholder="Пошук клієнта/сорту..." class="glass-input px-3 py-1.5 rounded-xl text-xs">
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300 border-separate border-spacing-y-1">
+            <thead class="bg-black/40 text-slate-400 uppercase text-[10px]">
+              <tr>
+                <th class="p-3 rounded-l-xl">Сорт</th>
+                <th class="p-3">Клієнт</th>
+                <th class="p-3 text-iosEmerald">Базова (г)</th>
+                <th class="p-3 text-iosPeach">Точна (*1.1)</th>
+                <th class="p-3 text-iosRose">Собівартість</th>
+                <th class="p-3 text-white">Виторг</th>
+                <th class="p-3 text-iosViolet">Прибуток</th>
+                <th class="p-3 text-iosAmber">🎁 Бонус</th>
+                <th class="p-3">Примітка / Борг</th>
+                <th class="p-3 rounded-r-xl">Час</th>
+              </tr>
+            </thead>
+            <tbody id="recordsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: GLOBAL ARCHIVE -->
+    <div class="swipe-page space-y-6">
+      <div class="glass-card p-4">
+        <h2 class="text-base font-black text-white uppercase flex items-center gap-2"><span>🗄️</span> Глобальний Макро-Архів</h2>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold">Всього Угод</p>
+          <p class="text-xl font-black text-white font-mono" id="gStatDeals">0</p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold">Глобальний Виторг</p>
+          <p class="text-xl font-black text-iosEmerald font-mono" id="gStatRevenue">0.00 €</p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold">Загальна Вага</p>
+          <p class="text-xl font-black text-iosPeach font-mono" id="gStatWeight">0.00 г</p>
+        </div>
+        <div class="glass-card p-3.5 space-y-1">
+          <p class="text-[10px] text-slate-400 uppercase font-bold">Бонусний Фонд</p>
+          <p class="text-xl font-black text-iosAmber font-mono" id="gStatBonuses">0.00 г</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
