@@ -4,7 +4,6 @@ export class ChartEngine {
     this.categoryChartInstance = null;
   }
 
-  // Очистка графіків при оновленні даних
   destroyCharts() {
     if (this.hourlyChartInstance) {
       this.hourlyChartInstance.destroy();
@@ -16,18 +15,15 @@ export class ChartEngine {
     }
   }
 
-  // 1. РЕНДЕР ТЕПЛОВОЇ КАРТИ (HEATMAP GRID)
+  // Heatmap Matrix (7 днів x 24 години)
   renderHeatmap(containerId, records) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Матриця 7 днів тижня x 24 години
     const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
     let maxDeals = 0;
-
     const daysMap = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
-    // Заповнюємо матрицю з розпарсених дат угод
     records.forEach(r => {
       if (r.parsedDateObj && !isNaN(r.parsedDateObj.getTime())) {
         const day = r.parsedDateObj.getDay(); 
@@ -41,15 +37,12 @@ export class ChartEngine {
     });
 
     let html = `<div class="min-w-[680px] space-y-1">`;
-    
-    // Заголовок годин (00..23)
     html += `<div class="grid grid-cols-[40px_repeat(24,1fr)] gap-1 text-[9px] font-mono text-slate-500 text-center pb-1"><div></div>`;
     for (let h = 0; h < 24; h++) {
       html += `<div>${String(h).padStart(2, '0')}</div>`;
     }
     html += `</div>`;
 
-    // Рядки днів тижня (Починаємо з Пн = 1 до Нд = 0)
     [1, 2, 3, 4, 5, 6, 0].forEach(dayIdx => {
       html += `<div class="grid grid-cols-[40px_repeat(24,1fr)] gap-1 items-center">`;
       html += `<div class="text-[10px] font-bold text-slate-400 font-mono">${daysMap[dayIdx]}</div>`;
@@ -78,7 +71,7 @@ export class ChartEngine {
     container.innerHTML = html;
   }
 
-  // 2. ГРАФІК ПО ГОДИНАХ (Chart.js Line)
+  // Hourly Line Chart
   renderHourlyChart(canvasId, records) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
@@ -95,14 +88,13 @@ export class ChartEngine {
       data: {
         labels: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`),
         datasets: [{
-          label: 'Кількість Угод',
+          label: 'Угод',
           data: hourlyCounts,
           borderColor: '#0A84FF',
           backgroundColor: 'rgba(10, 132, 255, 0.15)',
           fill: true,
           tension: 0.4,
-          pointRadius: 3,
-          pointHoverRadius: 6
+          pointRadius: 3
         }]
       },
       options: {
@@ -117,7 +109,7 @@ export class ChartEngine {
     });
   }
 
-  // 3. ГРАФІК КАТЕГОРІЙ (Chart.js Doughnut)
+  // Category Doughnut Chart
   renderCategoryChart(canvasId, records) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
