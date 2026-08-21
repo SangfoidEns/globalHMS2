@@ -1,250 +1,290 @@
-<!DOCTYPE html>
-<html lang="uk" class="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Humans 2.0 - Ultimate Analytics Engine</title>
+import { Utils } from './utils.js';
+import { ParserEngine } from './parser.js';
+import { store } from './store.js';
+import { charts } from './charts.js';
 
-  <!-- External CDNs -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+class ApplicationController {
+  constructor() {
+    this.activePage = 0;
+    this.currentRecords = [];
+  }
 
-  <!-- Local Assets -->
-  <link rel="stylesheet" href="css/styles.css">
-  <script src="js/config.js"></script>
-</head>
-<body class="space-y-4">
+  init() {
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
 
-  <div class="ios-aurora"></div>
+    this.initUser();
+    this.bindEvents();
+    this.startClock();
+    this.processData();
+  }
 
-  <!-- HEADER (Чистий та компактний) -->
-  <div class="p-3 md:p-6 pb-0 max-w-7xl mx-auto">
-    <header class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 glass-card p-4">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-iosPeach/40 flex items-center justify-center font-black text-iosPeach text-2xl shadow-[0_0_25px_rgba(255,159,10,0.25)]">
-          H2
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-lg font-black tracking-wider text-white uppercase">HUMANS <span class="px-2 py-0.5 rounded-lg bg-iosPeach/15 text-iosPeach border border-iosPeach/30 text-xs font-mono">ULTIMATE ANALYTICS</span></h1>
-          </div>
-          <p class="text-xs text-slate-400 mt-0.5">Операційний аналіз, фінансові потоки та глибока статистика</p>
-        </div>
+  initUser() {
+    let username = 'Operator_1';
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      const u = window.Telegram.WebApp.initDataUnsafe.user;
+      username = `tg_${u.id}`;
+      document.getElementById('tgUserName').innerText = `@${u.username || u.id}`;
+    } else {
+      username = localStorage.getItem('h2_last_active_user') || 'Operator_1';
+      document.getElementById('tgUserName').innerText = username;
+    }
+    store.initUser(username);
+    document.getElementById('rawInput').value = store.rawText;
+  }
+
+  bindEvents() {
+    document.getElementById('btnProcess').addEventListener('click', () => {
+      Utils.triggerHaptic('success');
+      this.processData();
+    });
+
+    document.getElementById('btnClear').addEventListener('click', () => {
+      Utils.triggerHaptic('warning');
+      document.getElementById('rawInput').value = '';
+      store.rawText = '';
+      this.processData();
+    });
+
+    document.getElementById('btnPage0').addEventListener('click', () => this.goToPage(0));
+    document.getElementById('btnPage1').addEventListener('click', () => this.goToPage(1));
+
+    // Подія додавання/оновлення закупки сорту
+    document.getElementById('purchaseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.addOrUpdatePurchase();
+    });
+
+    document.getElementById('btnSwitchUser').addEventListener('click', () => {
+      const newUser = prompt('Введіть ім\'я оператора:', store.currentUser);
+      if (newUser && newUser.trim()) {
+        const clean = newUser.trim().replace(/\s+/g, '_');
+        localStorage.setItem('h2_last_active_user', clean);
+        this.initUser();
+        this.processData();
+      }
+    });
+
+    document.getElementById('expenseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.addExpense();
+    });
+
+    document.getElementById('expensePresetsContainer').addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        document.getElementById('newExpenseCategoryInput').value = e.target.dataset.cat;
+        document.getElementById('newExpenseAmountInput').focus();
+      }
+    });
+
+    document.getElementById('tableSearch').addEventListener('keyup', (e) => {
+      const val = e.target.value.toLowerCase();
+      document.querySelectorAll('#recordsTableBody tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(val) ? '' : 'none';
+      });
+    });
+  }
+
+  addOrUpdatePurchase() {
+    const variety = document.getElementById('purchVarietyInput').value.trim().toUpperCase();
+    const cost = parseFloat(document.getElementById('purchCostInput').value);
+    const grams = parseFloat(document.getElementById('purchGramsInput').value);
+
+    if (!variety || isNaN(cost) || isNaN(grams) || grams <= 0) return;
+
+    store.varieties[variety] = { cost, grams };
+    store.currentVariety = variety;
+
+    document.getElementById('purchVarietyInput').value = '';
+    document.getElementById('purchCostInput').value = '';
+    document.getElementById('purchGramsInput').value = '';
+
+    Utils.triggerHaptic('success');
+    this.processData();
+  }
+
+  setPresetVariety(name) {
+    store.currentVariety = name;
+    Utils.triggerHaptic('light');
+    this.processData();
+  }
+
+  goToPage(idx) {
+    Utils.triggerHaptic('light');
+    this.activePage = idx;
+    document.getElementById('swipeContainer').style.transform = `translateX(-${idx * 100}vw)`;
+  }
+
+  processData() {
+    store.rawText = document.getElementById('rawInput').value;
+    const { detectedVariety, records } = ParserEngine.parseLogs(store.rawText);
+
+    if (detectedVariety !== 'UNKNOWN') store.currentVariety = detectedVariety;
+
+    document.getElementById('activeVarietyBadge').innerText = store.currentVariety;
+    document.getElementById('tableVarietyLabel').innerText = store.currentVariety;
+    document.getElementById('expenseTableTitle').innerText = store.currentVariety;
+
+    this.currentRecords = records.map(r => ({
+      ...r,
+      parsedDateObj: Utils.parseRecordDateTime(r.timeStr)
+    }));
+
+    let totalGrossRevenue = 0, totalBaseWeight = 0, totalExactWeight = 0, totalCostOfGoods = 0, totalActiveDebt = 0, totalCashPaid = 0;
+    const hourDistribution = Array(24).fill(0);
+    const hourWeightDistribution = Array(24).fill(0);
+    const clientVolumes = {};
+
+    this.currentRecords.forEach(r => {
+      r.exactGramm = r.baseGramm * 1.1;
+      // Дістаємо точну собівартість 1г для сорту угоди
+      r.pricePerGram = store.getPricePerGram(r.category);
+      r.dealCost = r.exactGramm * r.pricePerGram;
+      r.dealRevenue = r.baseGramm * 10;
+      r.dealProfit = r.dealRevenue - r.dealCost;
+
+      totalGrossRevenue += r.dealRevenue;
+      totalCashPaid += r.eurPaid;
+      totalActiveDebt += r.debtNew;
+      totalBaseWeight += r.baseGramm;
+      totalExactWeight += r.exactGramm;
+      totalCostOfGoods += r.dealCost;
+
+      clientVolumes[r.clientName] = (clientVolumes[r.clientName] || 0) + r.dealRevenue;
+
+      if (r.parsedDateObj) {
+        const h = r.parsedDateObj.getHours();
+        hourDistribution[h] += 1;
+        hourWeightDistribution[h] += r.baseGramm;
+      }
+    });
+
+    // Sub-expenses sum
+    const currentVarExpenses = store.varietyExpenses[store.currentVariety] || {};
+    const totalExpenses = Object.values(currentVarExpenses).reduce((a, b) => a + b, 0);
+    const netProfitFinal = totalGrossRevenue - totalCostOfGoods - totalExpenses - totalActiveDebt;
+
+    // Render KPIs
+    document.getElementById('kpiGrossRevenue').innerText = `${totalGrossRevenue.toFixed(2)} €`;
+    document.getElementById('kpiRevenue').innerText = `${totalCashPaid.toFixed(2)} €`;
+    document.getElementById('kpiNetProfitFinal').innerText = `${netProfitFinal.toFixed(2)} €`;
+    document.getElementById('kpiExactWeight').innerText = `${totalExactWeight.toFixed(1)} г`;
+    document.getElementById('kpiBaseWeight').innerText = `${totalBaseWeight.toFixed(1)}г`;
+    document.getElementById('kpiCostOfGoods').innerText = `${totalCostOfGoods.toFixed(2)} €`;
+    document.getElementById('kpiActiveDebt').innerText = `${totalActiveDebt.toFixed(2)} €`;
+    document.getElementById('totalExpensesSumLabel').innerText = `${totalExpenses.toFixed(2)} €`;
+
+    // Dynamic UI Updates
+    this.renderVarietyPresets();
+    this.renderExpensesList(currentVarExpenses);
+    this.renderTable(this.currentRecords);
+
+    // Render Charts
+    charts.renderPieChart('financePieChartCanvas', netProfitFinal, totalCostOfGoods, totalExpenses, totalActiveDebt);
+    charts.renderHourlyChart('page1ChartCanvas', hourDistribution, hourWeightDistribution);
+    charts.renderTopClientsChart('topClientsChartCanvas', clientVolumes);
+
+    store.save();
+  }
+
+  renderVarietyPresets() {
+    const container = document.getElementById('varietyPresetsContainer');
+    const keys = Object.keys(store.varieties);
+    
+    if (!keys.length) {
+      container.innerHTML = '<span class="text-[10px] text-slate-500">Сорти відсутні</span>';
+      return;
+    }
+
+    container.innerHTML = keys.map(v => {
+      const isSelected = store.currentVariety === v;
+      const data = store.varieties[v];
+      const ppg = (data.cost / data.grams).toFixed(2);
+
+      return `
+        <button type="button" data-vname="${v}" class="variety-btn px-2.5 py-1.5 rounded-xl text-[10px] font-bold border transition flex flex-col items-start ${
+          isSelected 
+            ? 'bg-iosPeach text-slate-950 border-iosPeach shadow-md' 
+            : 'bg-white/5 text-slate-300 border-white/10 hover:border-iosPeach/50'
+        }">
+          <span>${Utils.escapeHtml(v)}</span>
+          <span class="text-[8px] opacity-80 font-mono">${data.cost}€ / ${data.grams}г (${ppg}€/г)</span>
+        </button>
+      `;
+    }).join('');
+
+    // Прив'язка кліків до згенерованих кнопок сортів
+    container.querySelectorAll('.variety-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const vname = e.currentTarget.dataset.vname;
+        this.setPresetVariety(vname);
+      });
+    });
+  }
+
+  addExpense() {
+    const cat = document.getElementById('newExpenseCategoryInput').value.trim();
+    const val = parseFloat(document.getElementById('newExpenseAmountInput').value);
+    if (!cat || isNaN(val)) return;
+
+    if (!store.varietyExpenses[store.currentVariety]) {
+      store.varietyExpenses[store.currentVariety] = {};
+    }
+    store.varietyExpenses[store.currentVariety][cat] = val;
+
+    document.getElementById('newExpenseCategoryInput').value = '';
+    document.getElementById('newExpenseAmountInput').value = '';
+    this.processData();
+  }
+
+  renderExpensesList(expenses) {
+    const container = document.getElementById('expenseCategoriesContainer');
+    const keys = Object.keys(expenses);
+    if (!keys.length) {
+      container.innerHTML = '<p class="text-[10px] text-slate-500">Витрати відсутні</p>';
+      return;
+    }
+    container.innerHTML = keys.map(k => `
+      <div class="flex justify-between items-center text-xs bg-white/5 px-2.5 py-1.5 rounded-xl border border-white/5">
+        <span class="text-slate-300 font-bold">${Utils.escapeHtml(k)}</span>
+        <span class="font-mono text-iosRose font-bold">${expenses[k].toFixed(2)} €</span>
       </div>
+    `).join('');
+  }
 
-      <div class="flex flex-wrap items-center gap-3 justify-between lg:justify-end">
-        <div class="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
-          <button id="btnPage0" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-iosPeach text-slate-950 shadow-lg">1. Сесія</button>
-          <button id="btnPage1" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-transparent text-slate-400 hover:text-white">2. Глобальний Архів</button>
-        </div>
+  renderTable(records) {
+    const tbody = document.getElementById('recordsTableBody');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-slate-500">Записи відсутні</td></tr>';
+      return;
+    }
 
-        <div id="tgUserBadge" class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-iosPeach/30 text-xs">
-          <span class="w-2 h-2 rounded-full bg-iosEmerald animate-ping"></span>
-          <span id="tgUserName" class="font-bold text-iosPeach">User Auth</span>
-          <button id="btnSwitchUser" class="text-[10px] bg-iosPeach/20 text-iosPeach px-2 py-0.5 rounded-md hover:bg-iosPeach/30 transition border border-iosPeach/30 font-bold glass-card-interactive">Змінити</button>
-        </div>
+    tbody.innerHTML = records.map(r => `
+      <tr class="hover:bg-white/5 transition rounded-xl">
+        <td class="p-3 font-bold font-mono text-iosPeach text-[11px]">${Utils.escapeHtml(r.category)}</td>
+        <td class="p-3 font-bold text-slate-200">${Utils.escapeHtml(r.clientName)}</td>
+        <td class="p-3 font-mono text-iosEmerald">${r.baseGramm.toFixed(1)} г</td>
+        <td class="p-3 font-mono text-iosPeach">${r.exactGramm.toFixed(1)} г</td>
+        <td class="p-3 font-mono text-iosRose">${r.dealCost.toFixed(1)} €</td>
+        <td class="p-3 font-mono font-black text-white">${r.dealRevenue.toFixed(1)} €</td>
+        <td class="p-3 font-mono text-iosViolet">${r.dealProfit.toFixed(1)} €</td>
+        <td class="p-3 font-mono text-iosAmber">${r.bonusGrams ? `🎁 ${r.bonusGrams}г` : '-'}</td>
+        <td class="p-3 font-mono text-slate-400">${Utils.escapeHtml(r.rawDebtText) || '-'}</td>
+        <td class="p-3 font-mono text-slate-400 text-[10px]">${Utils.escapeHtml(r.timeStr)}</td>
+      </tr>
+    `).join('');
+  }
 
-        <div class="text-right hidden xl:block bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
-          <p id="liveClock" class="text-xs font-mono font-bold text-iosPeach">--:--:--</p>
-        </div>
-      </div>
-    </header>
-  </div>
+  startClock() {
+    setInterval(() => {
+      document.getElementById('liveClock').innerText = new Date().toLocaleTimeString();
+    }, 1000);
+  }
+}
 
-  <!-- SWIPE CONTAINER -->
-  <div id="swipeContainer" class="swipe-container max-w-7xl mx-auto">
-    <!-- PAGE 1: CURRENT SESSION -->
-    <div class="swipe-page space-y-6">
-      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>💰</span> Валовий Виторг</p>
-          <p class="text-lg font-black text-white font-mono" id="kpiGrossRevenue">0.00 €</p>
-          <p class="text-[9px] text-slate-500">Нараховано за тарифом</p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>💵</span> Каса На Руках</p>
-          <p class="text-lg font-black text-iosEmerald font-mono" id="kpiRevenue">0.00 €</p>
-          <p class="text-[9px] text-iosEmerald/70">Фактично отримано</p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>💎</span> Чистий Прибуток</p>
-          <p class="text-lg font-black text-iosViolet font-mono" id="kpiNetProfitFinal">0.00 €</p>
-          <p class="text-[9px] text-iosViolet/70">Виторг - закупка - витрати</p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>📦</span> Точна Вага (*1.1)</p>
-          <p class="text-lg font-black text-iosPeach font-mono" id="kpiExactWeight">0.0 г</p>
-          <p class="text-[9px] text-slate-500">Базова: <span id="kpiBaseWeight">0г</span></p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>📉</span> Собівартість</p>
-          <p class="text-lg font-black text-iosRose font-mono" id="kpiCostOfGoods">0.00 €</p>
-          <p class="text-[9px] text-iosRose/70">Закупка товару</p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1"><span>🔴</span> Активні Борги</p>
-          <p class="text-lg font-black text-iosAmber font-mono" id="kpiActiveDebt">0.00 €</p>
-          <p class="text-[9px] text-iosAmber/70">Неповернені кошти</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-4 space-y-6">
-          
-          <!-- ТЕРМІНАЛ + МЕНЮ ЗАКУПКИ ТА СОРТІВ -->
-          <div class="glass-card p-4 space-y-4">
-            <div class="flex justify-between items-center border-b border-white/10 pb-2">
-              <h2 class="text-xs font-bold tracking-wider uppercase text-iosPeach flex items-center gap-2"><span>📝</span> Термінал журналу</h2>
-              <span class="text-[10px] text-slate-400 font-mono">Парсер 2.0</span>
-            </div>
-
-            <!-- Перенесене меню закупок та сортів -->
-            <div class="bg-black/30 p-3 rounded-xl border border-white/5 space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-slate-300 uppercase flex items-center gap-1.5"><span>🌿</span> Активний сорт:</span>
-                <span id="activeVarietyBadge" class="px-2 py-0.5 rounded-md bg-iosPeach/20 text-iosPeach border border-iosPeach/30 text-xs font-black uppercase">--</span>
-              </div>
-
-              <!-- Швидкий вибір preset сортів -->
-              <div id="varietyPresetsContainer" class="flex flex-wrap gap-1.5 pt-1"></div>
-
-              <!-- Форма додавання / редагування закупки сорту -->
-              <form id="purchaseForm" class="space-y-2 border-t border-white/10 pt-2.5">
-                <p class="text-[10px] text-slate-400 font-bold uppercase">Додати / Оновити закупку:</p>
-                <div class="grid grid-cols-3 gap-1.5">
-                  <input type="text" id="purchVarietyInput" placeholder="Сорт" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-bold uppercase" required />
-                  <input type="number" step="0.1" id="purchCostInput" placeholder="Сума €" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-mono" required />
-                  <input type="number" step="0.1" id="purchGramsInput" placeholder="Вага г" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-mono" required />
-                </div>
-                <button type="submit" class="w-full py-1.5 bg-iosPeach/20 hover:bg-iosPeach/30 text-iosPeach border border-iosPeach/40 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 glass-card-interactive">
-                  <span>+</span> Зберегти Закупку
-                </button>
-              </form>
-            </div>
-
-            <textarea id="rawInput" class="w-full h-40 p-3 glass-input rounded-xl text-xs font-mono resize-none leading-relaxed" placeholder="Вставити журнал угод сюди..."></textarea>
-            
-            <div class="flex gap-2">
-              <button id="btnProcess" class="flex-1 py-2.5 bg-gradient-to-r from-iosPeach to-orange-500 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:opacity-90 transition glass-card-interactive">ОБРОБИТИ ЖУРНАЛ</button>
-              <button id="btnClear" class="px-4 py-2.5 bg-white/5 border border-iosRose/40 text-iosRose font-bold text-xs rounded-xl hover:bg-iosRose/10 transition glass-card-interactive">ОЧИСТИТИ</button>
-            </div>
-          </div>
-
-          <!-- ОПЕРАЦІЙНІ ВИУРАТИ -->
-          <div class="glass-card p-4 space-y-3">
-            <div class="flex justify-between items-center border-b border-white/10 pb-2">
-              <div>
-                <h2 class="text-xs font-bold uppercase text-iosRose flex items-center gap-2"><span>📉</span> Операційні Витрати</h2>
-                <p class="text-[9px] text-slate-400">Сесія: <span id="expenseTableTitle" class="text-iosPeach">--</span></p>
-              </div>
-              <span id="totalExpensesSumLabel" class="text-xs font-mono font-bold text-iosRose">0.00 €</span>
-            </div>
-
-            <div class="space-y-1">
-              <p class="text-[10px] text-slate-400 font-bold uppercase">Швидкий вибір:</p>
-              <div class="flex flex-wrap gap-1" id="expensePresetsContainer">
-                <button data-cat="Логістика" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">📦 Логістика</button>
-                <button data-cat="Таксі" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">🚖 Таксі</button>
-                <button data-cat="Комунальні" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">⚡ Комунальні</button>
-                <button data-cat="Пакування" class="px-2 py-1 bg-white/5 border border-white/10 hover:border-iosRose rounded-lg text-[10px] text-slate-300 transition glass-card-interactive">🏷️ Пакування</button>
-              </div>
-            </div>
-
-            <form id="expenseForm" class="flex flex-col gap-2 pt-1">
-              <div class="flex gap-2">
-                <input type="text" id="newExpenseCategoryInput" placeholder="Назва витрати..." class="flex-1 glass-input rounded-xl px-3 py-1.5 text-xs" required />
-                <input type="number" step="0.01" id="newExpenseAmountInput" placeholder="Сума €" class="w-24 glass-input rounded-xl px-3 py-1.5 text-xs font-mono" required />
-              </div>
-              <button type="submit" class="w-full py-2 bg-iosRose/20 hover:bg-iosRose/30 text-iosRose border border-iosRose/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 glass-card-interactive">
-                <span>+</span> Додати Витрату
-              </button>
-            </form>
-
-            <div id="expenseCategoriesContainer" class="space-y-2 max-h-36 overflow-y-auto pr-1 border-t border-white/10 pt-2"></div>
-          </div>
-        </div>
-
-        <div class="lg:col-span-8 space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div class="md:col-span-5 glass-card p-4 space-y-3 flex flex-col justify-between">
-              <div class="flex justify-between items-center border-b border-white/10 pb-2">
-                <h3 class="text-xs font-bold text-iosPeach uppercase flex items-center gap-1.5"><span>🎯</span> Структура Виторгу</h3>
-                <span class="text-[9px] text-slate-400 font-mono">Розподіл €</span>
-              </div>
-              <div class="h-48 relative flex items-center justify-center"><canvas id="financePieChartCanvas"></canvas></div>
-            </div>
-            <div class="md:col-span-7 glass-card p-4 space-y-3 flex flex-col justify-between">
-              <div class="flex justify-between items-center border-b border-white/10 pb-2">
-                <h3 class="text-xs font-bold text-iosCyan uppercase flex items-center gap-1.5"><span>📈</span> Динаміка За Годинами</h3>
-              </div>
-              <div class="h-48 relative"><canvas id="page1ChartCanvas"></canvas></div>
-            </div>
-          </div>
-
-          <div class="glass-card p-4 space-y-3">
-            <h3 class="text-xs font-bold text-iosEmerald uppercase flex items-center gap-2"><span>👑</span> Топ Покупці за Сумою (€)</h3>
-            <div class="h-44 relative"><canvas id="topClientsChartCanvas"></canvas></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="glass-card p-4 space-y-4">
-        <div class="flex justify-between items-center flex-wrap gap-2">
-          <h2 class="text-xs font-bold tracking-wider uppercase text-slate-300 flex items-center gap-2">
-            <span>📋</span> Детальний Журнал Сесії (<span id="tableVarietyLabel" class="text-iosPeach">--</span>)
-          </h2>
-          <input type="text" id="tableSearch" placeholder="Пошук клієнта/сорту..." class="glass-input px-3 py-1.5 rounded-xl text-xs">
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300 border-separate border-spacing-y-1">
-            <thead class="bg-black/40 text-slate-400 uppercase text-[10px]">
-              <tr>
-                <th class="p-3 rounded-l-xl">Сорт</th>
-                <th class="p-3">Клієнт</th>
-                <th class="p-3 text-iosEmerald">Базова (г)</th>
-                <th class="p-3 text-iosPeach">Точна (*1.1)</th>
-                <th class="p-3 text-iosRose">Собівартість</th>
-                <th class="p-3 text-white">Виторг</th>
-                <th class="p-3 text-iosViolet">Прибуток</th>
-                <th class="p-3 text-iosAmber">🎁 Бонус</th>
-                <th class="p-3">Примітка / Борг</th>
-                <th class="p-3 rounded-r-xl">Час</th>
-              </tr>
-            </thead>
-            <tbody id="recordsTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- PAGE 2: GLOBAL ARCHIVE -->
-    <div class="swipe-page space-y-6">
-      <div class="glass-card p-4">
-        <h2 class="text-base font-black text-white uppercase flex items-center gap-2"><span>🗄️</span> Глобальний Макро-Архів</h2>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold">Всього Угод</p>
-          <p class="text-xl font-black text-white font-mono" id="gStatDeals">0</p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold">Глобальний Виторг</p>
-          <p class="text-xl font-black text-iosEmerald font-mono" id="gStatRevenue">0.00 €</p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold">Загальна Вага</p>
-          <p class="text-xl font-black text-iosPeach font-mono" id="gStatWeight">0.00 г</p>
-        </div>
-        <div class="glass-card p-3.5 space-y-1">
-          <p class="text-[10px] text-slate-400 uppercase font-bold">Бонусний Фонд</p>
-          <p class="text-xl font-black text-iosAmber font-mono" id="gStatBonuses">0.00 г</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="js/app.js"></script>
-</body>
-</html>
+document.addEventListener('DOMContentLoaded', () => {
+  const app = new ApplicationController();
+  app.init();
+});
