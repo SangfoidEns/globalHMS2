@@ -1,25 +1,19 @@
 import { parseTableData } from './parser.js';
+import { CalculationEngine } from './calculator.js';
 import { charts } from './charts.js';
 import { Store } from './store.js';
 
 class ApplicationController {
   constructor() {
     this.rawInput = document.getElementById('rawInput');
-    this.expensesInput = document.getElementById('expensesInput');
     this.btnParse = document.getElementById('btnParse');
-    
-    this.currentRecords = [];
-    this.manualExpenses = Store.getExpenses();
+    this.pricingMap = Store.getPricing();
+    this.myTransactions = Store.getMyTransactions();
 
     this.init();
   }
 
   init() {
-    if (this.expensesInput) {
-      this.expensesInput.value = this.manualExpenses > 0 ? this.manualExpenses : '';
-      this.expensesInput.addEventListener('input', (e) => this.onExpensesChange(e));
-    }
-
     if (this.btnParse) {
       this.btnParse.addEventListener('click', () => this.processData());
     }
@@ -31,11 +25,17 @@ class ApplicationController {
     }
   }
 
-  onExpensesChange(e) {
-    const val = parseFloat(e.target.value);
-    this.manualExpenses = isNaN(val) ? 0 : val;
-    Store.setExpenses(this.manualExpenses);
-    this.updateKPIsOnly();
+  addMyTransaction(description, amount, isIncome) {
+    const finalAmount = isIncome ? Math.abs(amount) : -Math.abs(amount);
+    this.myTransactions.push({ description, amount: finalAmount, date: new Date() });
+    Store.setMyTransactions(this.myTransactions);
+    this.processData();
+  }
+
+  addCustomCategory(categoryName, costPer100g = 500) {
+    this.pricingMap[categoryName.toUpperCase()] = costPer100g;
+    Store.setPricing(this.pricingMap);
+    this.processData();
   }
 
   processData() {
@@ -44,34 +44,22 @@ class ApplicationController {
 
     Store.setRawData(text);
 
-    this.currentRecords = parseTableData(text);
+    const parsedRecords = parseTableData(text);
+    const kpis = CalculationEngine.calculateKPIs(parsedRecords, this.pricingMap, this.myTransactions);
 
-    this.updateKPIsOnly();
+    this.renderKPIs(kpis);
 
     charts.destroyCharts();
-    charts.renderHeatmap('heatmapContainer', this.currentRecords);
-    charts.renderHourlyChart('hourlyChart', this.currentRecords);
-    charts.renderCategoryChart('categoryChart', this.currentRecords);
+    charts.renderHeatmap('heatmapContainer', kpis.deals);
+    charts.renderHourlyChart('hourlyChart', kpis.deals);
+    charts.renderCategoryChart('categoryChart', kpis.deals);
   }
 
-  updateKPIsOnly() {
-    let grossRevenue = 0; 
-    let totalCashPaid = 0; 
-    let totalDebt = 0;     
-
-    this.currentRecords.forEach(r => {
-      grossRevenue += (r.totalPrice || 0);
-      totalCashPaid += (r.eurPaid || 0);
-      totalDebt += (r.debtNew || 0);
-    });
-
-    // Чиста Каса на руках = Готівка за угоди - Витрати
-    const netCashInHand = totalCashPaid - this.manualExpenses;
-
-    document.getElementById('kpiGrossRevenue').innerText = `${grossRevenue.toFixed(2)} €`;
-    document.getElementById('kpiRevenue').innerText = `${netCashInHand.toFixed(2)} €`;
-    document.getElementById('kpiDebt').innerText = `${totalDebt.toFixed(2)} €`;
-    document.getElementById('kpiDeals').innerText = this.currentRecords.length;
+  renderKPIs(kpis) {
+    document.getElementById('kpiGrossRevenue').innerText = `${kpis.kpiExpectedRevenue.toFixed(2)} €`;
+    document.getElementById('kpiRevenue').innerText = `${kpis.kpiRevenue.toFixed(2)} €`;
+    document.getElementById('kpiDebt').innerText = `${kpis.kpiActiveDebt.toFixed(2)} €`;
+    document.getElementById('kpiDeals').innerText = kpis.totalDeals;
   }
 }
 
