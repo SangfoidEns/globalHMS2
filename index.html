@@ -60,38 +60,41 @@
     </div>
 
     <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       
       <!-- KPI 1: Очікувана виручка -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl flex flex-col justify-between">
         <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Очікувана Виручка</span>
-        <div id="kpiGrossRevenue" class="text-2xl font-bold text-white mt-2 font-mono">0.00 €</div>
-        <span class="text-[10px] text-slate-500 mt-1">Загальна розрахункова вартість (Base × 10€)</span>
+        <div id="kpiGrossRevenue" class="text-xl font-bold text-white mt-2 font-mono">0.00 €</div>
+        <span class="text-[10px] text-slate-500 mt-1">Base_Gramm × 10€</span>
       </div>
 
-      <!-- KPI 2: Чиста Каса на руках -->
-      <div class="bg-iosCard backdrop-blur-xl border border-iosOrange/40 p-4 rounded-2xl flex flex-col justify-between relative overflow-hidden">
-        <div class="flex justify-between items-center">
-          <span class="text-xs text-iosOrange uppercase tracking-wider font-semibold flex items-center gap-1">
-            <span>💵</span> Фактично Отримано (Каса)
-          </span>
-        </div>
-        <div id="kpiRevenue" class="text-2xl font-bold text-iosOrange mt-1 font-mono">0.00 €</div>
-        <span class="text-[10px] text-slate-500 mt-1">Сума оплати мінус розходи "МОЇ"</span>
+      <!-- KPI 2: Фактично отримано -->
+      <div class="bg-iosCard backdrop-blur-xl border border-iosOrange/40 p-4 rounded-2xl flex flex-col justify-between">
+        <span class="text-xs text-iosOrange uppercase tracking-wider font-semibold">Фактично Отримано</span>
+        <div id="kpiRevenue" class="text-xl font-bold text-iosOrange mt-2 font-mono">0.00 €</div>
+        <span class="text-[10px] text-slate-500 mt-1">∑ eurPaid - Розходи "МОЇ"</span>
       </div>
 
-      <!-- KPI 3: Активні борги -->
+      <!-- KPI 3: Чистий прибуток -->
+      <div class="bg-iosCard backdrop-blur-xl border border-iosGreen/40 p-4 rounded-2xl flex flex-col justify-between">
+        <span class="text-xs text-iosGreen uppercase tracking-wider font-semibold">Чистий Прибуток</span>
+        <div id="kpiNetProfit" class="text-xl font-bold text-iosGreen mt-2 font-mono">0.00 €</div>
+        <span class="text-[10px] text-slate-500 mt-1">∑ dealProfit + MOI (±)</span>
+      </div>
+
+      <!-- KPI 4: Активні борги -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl flex flex-col justify-between">
         <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Активний Борг</span>
-        <div id="kpiDebt" class="text-2xl font-bold text-iosRed mt-2 font-mono">0.00 €</div>
-        <span class="text-[10px] text-slate-500 mt-1">Сума непогашених боргів клієнтів</span>
+        <div id="kpiDebt" class="text-xl font-bold text-iosRed mt-2 font-mono">0.00 €</div>
+        <span class="text-[10px] text-slate-500 mt-1">Сума боргів клієнтів > 0</span>
       </div>
 
-      <!-- KPI 4: Кількість угод -->
+      <!-- KPI 5: Кількість угод -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl flex flex-col justify-between">
         <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Всього Угод</span>
-        <div id="kpiDeals" class="text-2xl font-bold text-iosGreen mt-2 font-mono">0</div>
-        <span class="text-[10px] text-slate-500 mt-1">Опрацьованих рядків журналу</span>
+        <div id="kpiDeals" class="text-xl font-bold text-iosBlue mt-2 font-mono">0</div>
+        <span class="text-[10px] text-slate-500 mt-1">Кількість розпарсених блоків</span>
       </div>
 
     </div>
