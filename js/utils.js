@@ -13,7 +13,7 @@ export class Utils {
     return matches ? matches.map(m => this.parseFloatSafe(m)) : [];
   }
 
-  // Повна відповідність Промпту 1 для розбору боргу та грошей
+  // Детальний парсер боргу та оплат за Промптом 1
   static parseMoneyAndDebt(rawMoney) {
     let debtNew = 0;
     let debtRepaid = 0;
@@ -25,7 +25,6 @@ export class Utils {
     const hasDebtWord = str.includes('долг') || str.includes('борг');
 
     if (hasDebtWord) {
-      // Шукаємо конструкції: "долг -50", "-50 долг", "долг 50", "долг +50"
       const debtMatch = str.match(/(?:долг|борг)\s*([+-]?\d+(?:[.,]\d+)?)|([+-]?\d+(?:[.,]\d+)?)\s*(?:долг|борг)/);
       
       if (debtMatch) {
@@ -33,13 +32,12 @@ export class Utils {
         const debtVal = this.parseFloatSafe(debtValStr);
 
         if (debtVal < 0 || str.includes('-')) {
-          debtNew = Math.abs(debtVal); // Новий борг
+          debtNew = Math.abs(debtVal);
         } else {
-          debtRepaid = Math.abs(debtVal); // Погашення боргу
+          debtRepaid = Math.abs(debtVal);
         }
       }
 
-      // Інші позитивні числа вважаються фактично сплаченими коштами (eurPaid)
       const numbers = this.parseAllNumbers(str);
       numbers.forEach(num => {
         const absNum = Math.abs(num);
@@ -48,7 +46,6 @@ export class Utils {
         }
       });
     } else {
-      // Якщо слова "долг" немає, усі числа підсумовуються як eurPaid
       const numbers = this.parseAllNumbers(str);
       eurPaid = numbers.reduce((acc, num) => acc + (num > 0 ? num : 0), 0);
     }
