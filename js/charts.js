@@ -1,3 +1,5 @@
+import { CONFIG } from './config.js';
+
 export class ChartEngine {
   constructor() {
     this.hourlyChartInstance = null;
@@ -15,14 +17,13 @@ export class ChartEngine {
     }
   }
 
-  // Heatmap Matrix (7 днів x 24 години)
+  // 1. Heatmap Matrix (7 днів x 24 години)
   renderHeatmap(containerId, records) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
     let maxDeals = 0;
-    const daysMap = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
     records.forEach(r => {
       if (r.parsedDateObj && !isNaN(r.parsedDateObj.getTime())) {
@@ -45,7 +46,7 @@ export class ChartEngine {
 
     [1, 2, 3, 4, 5, 6, 0].forEach(dayIdx => {
       html += `<div class="grid grid-cols-[40px_repeat(24,1fr)] gap-1 items-center">`;
-      html += `<div class="text-[10px] font-bold text-slate-400 font-mono">${daysMap[dayIdx]}</div>`;
+      html += `<div class="text-[10px] font-bold text-slate-400 font-mono">${CONFIG.DAYS_MAP[dayIdx]}</div>`;
 
       for (let h = 0; h < 24; h++) {
         const count = matrix[dayIdx][h];
@@ -57,7 +58,7 @@ export class ChartEngine {
         }
 
         html += `
-          <div title="${daysMap[dayIdx]} ${h}:00 — Угод: ${count}" 
+          <div title="${CONFIG.DAYS_MAP[dayIdx]} ${h}:00 — Угод: ${count}" 
                style="${bgStyle}" 
                class="h-6 rounded border border-white/5 flex items-center justify-center text-[9px] font-mono transition-transform hover:scale-110 cursor-pointer ${count > 0 ? 'text-slate-950 font-bold' : 'text-transparent'}">
             ${count > 0 ? count : ''}
@@ -71,7 +72,7 @@ export class ChartEngine {
     container.innerHTML = html;
   }
 
-  // Hourly Line Chart
+  // 2. Hourly Line Chart
   renderHourlyChart(canvasId, records) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
@@ -109,7 +110,7 @@ export class ChartEngine {
     });
   }
 
-  // Category Doughnut Chart
+  // 3. Category Doughnut Chart
   renderCategoryChart(canvasId, records) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
