@@ -7,6 +7,7 @@ class ApplicationController {
   constructor() {
     this.rawInput = document.getElementById('rawInput');
     this.btnParse = document.getElementById('btnParse');
+    
     this.pricingMap = Store.getPricing();
     this.manualTransactions = Store.getManualTransactions();
 
