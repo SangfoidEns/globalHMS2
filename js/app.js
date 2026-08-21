@@ -46,6 +46,7 @@ class ApplicationController {
   renderKPIs(kpis) {
     document.getElementById('kpiGrossRevenue').innerText = `${kpis.kpiExpectedRevenue.toFixed(2)} €`;
     document.getElementById('kpiRevenue').innerText = `${kpis.kpiRevenue.toFixed(2)} €`;
+    document.getElementById('kpiNetProfit').innerText = `${kpis.kpiNetProfit.toFixed(2)} €`;
     document.getElementById('kpiDebt').innerText = `${kpis.kpiActiveDebt.toFixed(2)} €`;
     document.getElementById('kpiDeals').innerText = kpis.totalDeals;
   }
