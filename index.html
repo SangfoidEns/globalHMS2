@@ -33,7 +33,7 @@
 
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-    <!-- Header Section -->
+    <!-- Header -->
     <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-iosCard backdrop-blur-xl border border-iosBorder p-5 rounded-2xl shadow-2xl">
       <div>
         <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
@@ -49,7 +49,7 @@
       </div>
     </header>
 
-    <!-- Raw Data Input Section -->
+    <!-- Raw Data Input -->
     <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl space-y-3">
       <div class="flex justify-between items-center">
         <label for="rawInput" class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
@@ -59,7 +59,7 @@
       <textarea id="rawInput" rows="4" class="w-full bg-black/40 border border-iosBorder rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-iosBlue transition-colors resize-y" placeholder="Вставте сюди скопійований текст із таблиці..."></textarea>
     </div>
 
-    <!-- KPI Cards Section -->
+    <!-- KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       
       <!-- KPI 1: Валовий Виторг -->
@@ -69,7 +69,7 @@
         <span class="text-[10px] text-slate-500 mt-1">Загальна вартість проданих товарів</span>
       </div>
 
-      <!-- KPI 2: Чиста Каса на руках з ручними витратами -->
+      <!-- KPI 2: Чиста Каса на руках -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosOrange/40 p-4 rounded-2xl flex flex-col justify-between relative overflow-hidden">
         <div class="flex justify-between items-center">
           <span class="text-xs text-iosOrange uppercase tracking-wider font-semibold flex items-center gap-1">
@@ -78,7 +78,7 @@
         </div>
         <div id="kpiRevenue" class="text-2xl font-bold text-iosOrange mt-1 font-mono">0.00 €</div>
         
-        <!-- Ручні витрати -->
+        <!-- Поле введення витрат -->
         <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between gap-2">
           <label for="expensesInput" class="text-[11px] text-slate-400">Витрати (€):</label>
           <input type="number" id="expensesInput" min="0" step="any" placeholder="0" 
@@ -93,7 +93,7 @@
         <span class="text-[10px] text-slate-500 mt-1">Сума неоплачених угод</span>
       </div>
 
-      <!-- KPI 4: Всього Угод -->
+      <!-- KPI 4: Кількість угод -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl flex flex-col justify-between">
         <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Всього Угод</span>
         <div id="kpiDeals" class="text-2xl font-bold text-iosGreen mt-2 font-mono">0</div>
@@ -102,7 +102,7 @@
 
     </div>
 
-    <!-- HEATMAP SECTION -->
+    <!-- HEATMAP GRAPH -->
     <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl space-y-3">
       <div class="flex justify-between items-center border-b border-iosBorder pb-2">
         <h3 class="text-xs font-bold text-iosPeach uppercase tracking-wider flex items-center gap-1.5">
@@ -112,7 +112,7 @@
       </div>
       
       <div id="heatmapContainer" class="overflow-x-auto pt-2">
-        <!-- JS Grid Heatmap -->
+        <!-- Матрична сітка будується через JS -->
       </div>
     </div>
 
