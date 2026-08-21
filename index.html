@@ -18,7 +18,7 @@
 
   <div class="ios-aurora"></div>
 
-  <!-- HEADER -->
+  <!-- HEADER (Чистий та компактний) -->
   <div class="p-3 md:p-6 pb-0 max-w-7xl mx-auto">
     <header class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 glass-card p-4">
       <div class="flex items-center gap-3">
@@ -30,18 +30,6 @@
             <h1 class="text-lg font-black tracking-wider text-white uppercase">HUMANS <span class="px-2 py-0.5 rounded-lg bg-iosPeach/15 text-iosPeach border border-iosPeach/30 text-xs font-mono">ULTIMATE ANALYTICS</span></h1>
           </div>
           <p class="text-xs text-slate-400 mt-0.5">Операційний аналіз, фінансові потоки та глибока статистика</p>
-        </div>
-      </div>
-
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md">
-        <div class="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/10">
-          <span class="text-xs font-bold text-slate-400">🌿 Сорти:</span>
-          <span id="activeVarietyBadge" class="text-xs font-black text-iosPeach uppercase tracking-wider">--</span>
-        </div>
-        <div id="varietyCostsContainer" class="flex flex-wrap items-center gap-2"></div>
-        <div class="flex items-center gap-1">
-          <button id="btnPresetBannan" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-iosPeach/20 text-slate-300 hover:text-iosPeach border border-white/10 transition glass-card-interactive">BANNAN</button>
-          <button id="btnPresetSkittles" class="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-white/5 hover:bg-iosPeach/20 text-slate-300 hover:text-iosPeach border border-white/10 transition glass-card-interactive">SKITTLES</button>
         </div>
       </div>
 
@@ -103,18 +91,47 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div class="lg:col-span-4 space-y-6">
-          <div class="glass-card p-4 space-y-3">
-            <div class="flex justify-between items-center">
+          
+          <!-- ТЕРМІНАЛ + МЕНЮ ЗАКУПКИ ТА СОРТІВ -->
+          <div class="glass-card p-4 space-y-4">
+            <div class="flex justify-between items-center border-b border-white/10 pb-2">
               <h2 class="text-xs font-bold tracking-wider uppercase text-iosPeach flex items-center gap-2"><span>📝</span> Термінал журналу</h2>
               <span class="text-[10px] text-slate-400 font-mono">Парсер 2.0</span>
             </div>
-            <textarea id="rawInput" class="w-full h-44 p-3 glass-input rounded-xl text-xs font-mono resize-none leading-relaxed" placeholder="Вставити журнал угод сюди..."></textarea>
+
+            <!-- Перенесене меню закупок та сортів -->
+            <div class="bg-black/30 p-3 rounded-xl border border-white/5 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-300 uppercase flex items-center gap-1.5"><span>🌿</span> Активний сорт:</span>
+                <span id="activeVarietyBadge" class="px-2 py-0.5 rounded-md bg-iosPeach/20 text-iosPeach border border-iosPeach/30 text-xs font-black uppercase">--</span>
+              </div>
+
+              <!-- Швидкий вибір preset сортів -->
+              <div id="varietyPresetsContainer" class="flex flex-wrap gap-1.5 pt-1"></div>
+
+              <!-- Форма додавання / редагування закупки сорту -->
+              <form id="purchaseForm" class="space-y-2 border-t border-white/10 pt-2.5">
+                <p class="text-[10px] text-slate-400 font-bold uppercase">Додати / Оновити закупку:</p>
+                <div class="grid grid-cols-3 gap-1.5">
+                  <input type="text" id="purchVarietyInput" placeholder="Сорт" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-bold uppercase" required />
+                  <input type="number" step="0.1" id="purchCostInput" placeholder="Сума €" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-mono" required />
+                  <input type="number" step="0.1" id="purchGramsInput" placeholder="Вага г" class="glass-input rounded-lg px-2.5 py-1.5 text-xs font-mono" required />
+                </div>
+                <button type="submit" class="w-full py-1.5 bg-iosPeach/20 hover:bg-iosPeach/30 text-iosPeach border border-iosPeach/40 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 glass-card-interactive">
+                  <span>+</span> Зберегти Закупку
+                </button>
+              </form>
+            </div>
+
+            <textarea id="rawInput" class="w-full h-40 p-3 glass-input rounded-xl text-xs font-mono resize-none leading-relaxed" placeholder="Вставити журнал угод сюди..."></textarea>
+            
             <div class="flex gap-2">
               <button id="btnProcess" class="flex-1 py-2.5 bg-gradient-to-r from-iosPeach to-orange-500 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:opacity-90 transition glass-card-interactive">ОБРОБИТИ ЖУРНАЛ</button>
               <button id="btnClear" class="px-4 py-2.5 bg-white/5 border border-iosRose/40 text-iosRose font-bold text-xs rounded-xl hover:bg-iosRose/10 transition glass-card-interactive">ОЧИСТИТИ</button>
             </div>
           </div>
 
+          <!-- ОПЕРАЦІЙНІ ВИУРАТИ -->
           <div class="glass-card p-4 space-y-3">
             <div class="flex justify-between items-center border-b border-white/10 pb-2">
               <div>
