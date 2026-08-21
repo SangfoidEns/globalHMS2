@@ -14,14 +14,13 @@ export function parseTableData(rawText) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // 1. Детекція теми / категорії (рядки перед name, gramm, €)
+    // 1. Визначення категорії (Блок із заголовками name, gramm, €)
     if (i + 1 < lines.length) {
       const nextLine = lines[i + 1].toLowerCase();
       if (nextLine.includes('name') || nextLine.includes('gramm') || nextLine.includes('€')) {
         currentCategory = line.toUpperCase();
-        i += 2; // Перестрибуємо назву категорії та заголовок
+        i += 2;
 
-        // Перевірка на дату-префікс одразу після заголовка
         if (i < lines.length && /^\d{1,2}\.\d{1,2}(\.\d{2,4})?$/.test(lines[i])) {
           currentDatePrefix = lines[i];
           i++;
@@ -30,16 +29,14 @@ export function parseTableData(rawText) {
       }
     }
 
-    // 2. Детекція категорії "МОЇ" (Ручні витрати/доходи)
+    // 2. Визначення категорії "МОЇ"
     if (line.toUpperCase() === 'МОЇ' || line.toUpperCase().startsWith('МОЇ')) {
       currentCategory = 'МОЇ';
       i++;
       continue;
     }
 
-    // Обробка записів для категорії "МОЇ"
     if (currentCategory === 'МОЇ') {
-      // Очікуємо опис та суму (наприклад: "- Розхід 50" або "+ Дохід 100")
       const isExpense = line.includes('-') || line.toLowerCase().includes('розхід');
       const isIncome = line.includes('+') || line.toLowerCase().includes('дохід');
       const numbers = Utils.parseAllNumbers(line);
@@ -62,14 +59,13 @@ export function parseTableData(rawText) {
       continue;
     }
 
-    // 4. Зчитування 4-рядкового блоку угоди
+    // 4. Зчитування угоди (Блок з 4-х рядків)
     if (i + 3 < lines.length) {
       const clientName = lines[i];
       const rawGrammStr = lines[i + 1];
       const rawMoneyStr = lines[i + 2];
       const timeStr = lines[i + 3];
 
-      // Перевірка 4-го рядка на формат часу (містить : або ..)
       if (timeStr.includes(':') || timeStr.includes('..')) {
         const grammNumbers = Utils.parseAllNumbers(rawGrammStr);
         const baseGramm = grammNumbers.reduce((a, b) => a + b, 0);
