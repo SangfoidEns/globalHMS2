@@ -14,7 +14,6 @@ class ApplicationController {
   }
 
   init() {
-    // Встановлюємо збережене значення витрат у полі input
     if (this.expensesInput) {
       this.expensesInput.value = this.manualExpenses > 0 ? this.manualExpenses : '';
       this.expensesInput.addEventListener('input', (e) => this.onExpensesChange(e));
@@ -24,7 +23,6 @@ class ApplicationController {
       this.btnParse.addEventListener('click', () => this.processData());
     }
 
-    // Відновлюємо останні введені дані таблиці, якщо є
     const savedRaw = localStorage.getItem('hms_raw_data');
     if (savedRaw && this.rawInput) {
       this.rawInput.value = savedRaw;
@@ -32,43 +30,33 @@ class ApplicationController {
     }
   }
 
-  // Обробка зміни значення витрат
   onExpensesChange(e) {
     const val = parseFloat(e.target.value);
     this.manualExpenses = isNaN(val) ? 0 : val;
-    
-    // Зберігаємо витрати в localStorage
     localStorage.setItem('hms_manual_expenses', this.manualExpenses.toString());
-
-    // Перераховуємо касу без повного перепарсингу графіків
     this.updateKPIsOnly();
   }
 
-  // Основний цикл обробки даних
   processData() {
     const text = this.rawInput.value;
     if (!text.trim()) return;
 
     localStorage.setItem('hms_raw_data', text);
 
-    // 1. Парсимо сирий текст у масив структурованих записів
     this.currentRecords = parseTableData(text);
 
-    // 2. Оновлюємо показники KPI
     this.updateKPIsOnly();
 
-    // 3. Оновлюємо графіки та теплову карту
     charts.destroyCharts();
     charts.renderHeatmap('heatmapContainer', this.currentRecords);
     charts.renderHourlyChart('hourlyChart', this.currentRecords);
     charts.renderCategoryChart('categoryChart', this.currentRecords);
   }
 
-  // Окремий метод підрахунку KPI та чистої каси
   updateKPIsOnly() {
-    let grossRevenue = 0; // Загальний виторг
-    let totalCashPaid = 0; // Чиста готівка з угод
-    let totalDebt = 0;     // Нові борги
+    let grossRevenue = 0; 
+    let totalCashPaid = 0; 
+    let totalDebt = 0;     
 
     this.currentRecords.forEach(r => {
       grossRevenue += (r.totalPrice || 0);
@@ -76,11 +64,9 @@ class ApplicationController {
       totalDebt += (r.debtNew || 0);
     });
 
-    // МАТЕМАТИКА ЧИСТОЇ КАСИ:
-    // Фактична готівка за угодами мінус ручні витрати
+    // Чиста Каса = Фактична готівка з угод - Ручні витрати
     const netCashInHand = totalCashPaid - this.manualExpenses;
 
-    // Вивід у DOM
     document.getElementById('kpiGrossRevenue').innerText = `${grossRevenue.toFixed(2)} €`;
     document.getElementById('kpiRevenue').innerText = `${netCashInHand.toFixed(2)} €`;
     document.getElementById('kpiDebt').innerText = `${totalDebt.toFixed(2)} €`;
@@ -88,7 +74,6 @@ class ApplicationController {
   }
 }
 
-// Запуск застосунку після завантаження DOM
 document.addEventListener('DOMContentLoaded', () => {
   window.app = new ApplicationController();
 });
