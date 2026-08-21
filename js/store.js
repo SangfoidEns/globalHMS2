@@ -1,55 +1,19 @@
+import { CONFIG } from './config.js';
+
 export class Store {
-  constructor() {
-    this.currentUser = 'default';
-    this.currentVariety = 'UNKNOWN';
-    this.varietyExpenses = {};
-    // Кожен сорт має суму закупки (€) та закуплену вагу (г)
-    this.varieties = {
-      'BANNAN': { cost: 600, grams: 100 },
-      'SKITTLES': { cost: 660, grams: 100 }
-    };
-    this.rawText = '';
+  static getRawData() {
+    return localStorage.getItem(CONFIG.STORAGE_KEYS.RAW_DATA) || '';
   }
 
-  initUser(user) {
-    this.currentUser = user;
-    this.load();
+  static setRawData(text) {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.RAW_DATA, text);
   }
 
-  load() {
-    try {
-      const raw = localStorage.getItem(`h2_data_${this.currentUser}`);
-      if (raw) {
-        const data = JSON.parse(raw);
-        this.currentVariety = data.currentVariety || 'UNKNOWN';
-        this.varietyExpenses = data.varietyExpenses || {};
-        this.varieties = data.varieties || {
-          'BANNAN': { cost: 600, grams: 100 },
-          'SKITTLES': { cost: 660, grams: 100 }
-        };
-      }
-      this.rawText = localStorage.getItem(`h2_raw_${this.currentUser}`) || '';
-    } catch (e) {
-      console.error("Store Load Error:", e);
-    }
+  static getExpenses() {
+    return parseFloat(localStorage.getItem(CONFIG.STORAGE_KEYS.MANUAL_EXPENSES)) || 0;
   }
 
-  save() {
-    const data = {
-      currentVariety: this.currentVariety,
-      varietyExpenses: this.varietyExpenses,
-      varieties: this.varieties
-    };
-    localStorage.setItem(`h2_data_${this.currentUser}`, JSON.stringify(data));
-    localStorage.setItem(`h2_raw_${this.currentUser}`, this.rawText);
-  }
-
-  // Розрахунок себевартості 1 грама для конкретного сорту
-  getPricePerGram(varietyName) {
-    const v = this.varieties[varietyName];
-    if (!v || !v.grams || v.grams <= 0) return 6; // Значення за замовчуванням (6€/г)
-    return v.cost / v.grams;
+  static setExpenses(val) {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.MANUAL_EXPENSES, val.toString());
   }
 }
-
-export const store = new Store();
