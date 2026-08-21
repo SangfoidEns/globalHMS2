@@ -56,41 +56,35 @@
           <span>📝</span> Вхідний Текст Таблиці / Журналу
         </label>
       </div>
-      <textarea id="rawInput" rows="4" class="w-full bg-black/40 border border-iosBorder rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-iosBlue transition-colors resize-y" placeholder="Вставте сюди скопійований текст із таблиці..."></textarea>
+      <textarea id="rawInput" rows="6" class="w-full bg-black/40 border border-iosBorder rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-iosBlue transition-colors resize-y" placeholder="Вставте сюди скопійований текст із таблиці..."></textarea>
     </div>
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       
-      <!-- KPI 1: Валовий Виторг -->
+      <!-- KPI 1: Очікувана виручка -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl flex flex-col justify-between">
-        <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Загальний Виторг</span>
+        <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Очікувана Виручка</span>
         <div id="kpiGrossRevenue" class="text-2xl font-bold text-white mt-2 font-mono">0.00 €</div>
-        <span class="text-[10px] text-slate-500 mt-1">Загальна вартість проданих товарів</span>
+        <span class="text-[10px] text-slate-500 mt-1">Загальна розрахункова вартість (Base × 10€)</span>
       </div>
 
       <!-- KPI 2: Чиста Каса на руках -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosOrange/40 p-4 rounded-2xl flex flex-col justify-between relative overflow-hidden">
         <div class="flex justify-between items-center">
           <span class="text-xs text-iosOrange uppercase tracking-wider font-semibold flex items-center gap-1">
-            <span>💵</span> Каса На Руках (Чиста)
+            <span>💵</span> Фактично Отримано (Каса)
           </span>
         </div>
         <div id="kpiRevenue" class="text-2xl font-bold text-iosOrange mt-1 font-mono">0.00 €</div>
-        
-        <!-- Поле введення витрат -->
-        <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between gap-2">
-          <label for="expensesInput" class="text-[11px] text-slate-400">Витрати (€):</label>
-          <input type="number" id="expensesInput" min="0" step="any" placeholder="0" 
-                 class="w-24 bg-black/50 border border-iosBorder rounded-lg px-2 py-1 text-xs text-right font-mono text-iosRed focus:outline-none focus:border-iosRed transition-colors">
-        </div>
+        <span class="text-[10px] text-slate-500 mt-1">Сума оплати мінус розходи "МОЇ"</span>
       </div>
 
-      <!-- KPI 3: Борги -->
+      <!-- KPI 3: Активні борги -->
       <div class="bg-iosCard backdrop-blur-xl border border-iosBorder p-4 rounded-2xl flex flex-col justify-between">
-        <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Нові Борги</span>
+        <span class="text-xs text-iosTextSecondary uppercase tracking-wider font-semibold">Активний Борг</span>
         <div id="kpiDebt" class="text-2xl font-bold text-iosRed mt-2 font-mono">0.00 €</div>
-        <span class="text-[10px] text-slate-500 mt-1">Сума неоплачених угод</span>
+        <span class="text-[10px] text-slate-500 mt-1">Сума непогашених боргів клієнтів</span>
       </div>
 
       <!-- KPI 4: Кількість угод -->
@@ -111,9 +105,7 @@
         <span class="text-[9px] text-slate-400 font-mono">24 Hours x 7 Days</span>
       </div>
       
-      <div id="heatmapContainer" class="overflow-x-auto pt-2">
-        <!-- Матрична сітка будується через JS -->
-      </div>
+      <div id="heatmapContainer" class="overflow-x-auto pt-2"></div>
     </div>
 
     <!-- Charts -->
